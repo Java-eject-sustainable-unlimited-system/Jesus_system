@@ -78,6 +78,9 @@ public class WatchdogProperties {
     }
 
     public void setNixRunTarget(String nixRunTarget) {
+        if (nixRunTarget == null || nixRunTarget.isBlank()) {
+            throw new IllegalArgumentException("nixRunTarget must not be blank");
+        }
         this.nixRunTarget = nixRunTarget;
     }
 
@@ -110,7 +113,10 @@ public class WatchdogProperties {
     }
 
     public void setProbeHost(String probeHost) {
-        this.probeHost = probeHost;
+        if (probeHost == null || probeHost.isBlank()) {
+            throw new IllegalArgumentException("probeHost must not be blank");
+        }
+        this.probeHost = probeHost.trim();
     }
 
     public int getProbePort() {
@@ -118,6 +124,9 @@ public class WatchdogProperties {
     }
 
     public void setProbePort(int probePort) {
+        if (probePort < 1 || probePort > 65535) {
+            throw new IllegalArgumentException("probePort must be between 1 and 65535");
+        }
         this.probePort = probePort;
     }
 
@@ -126,6 +135,10 @@ public class WatchdogProperties {
     }
 
     public void setProbeTimeout(Duration probeTimeout) {
+        requirePositiveDuration(probeTimeout, "probeTimeout");
+        if (probeTimeout.compareTo(Duration.ofMillis(Integer.MAX_VALUE)) > 0) {
+            throw new IllegalArgumentException("probeTimeout must not exceed " + Integer.MAX_VALUE + " milliseconds");
+        }
         this.probeTimeout = probeTimeout;
     }
 
@@ -134,6 +147,7 @@ public class WatchdogProperties {
     }
 
     public void setHttpTimeout(Duration httpTimeout) {
+        requirePositiveDuration(httpTimeout, "httpTimeout");
         this.httpTimeout = httpTimeout;
     }
 
@@ -142,6 +156,9 @@ public class WatchdogProperties {
     }
 
     public void setFailureThreshold(int failureThreshold) {
+        if (failureThreshold < 1) {
+            throw new IllegalArgumentException("failureThreshold must be positive");
+        }
         this.failureThreshold = failureThreshold;
     }
 
@@ -150,6 +167,9 @@ public class WatchdogProperties {
     }
 
     public void setIoFailureThreshold(int ioFailureThreshold) {
+        if (ioFailureThreshold < 1) {
+            throw new IllegalArgumentException("ioFailureThreshold must be positive");
+        }
         this.ioFailureThreshold = ioFailureThreshold;
     }
 
@@ -158,6 +178,11 @@ public class WatchdogProperties {
     }
 
     public void setHeapCriticalThreshold(double heapCriticalThreshold) {
+        if (!Double.isFinite(heapCriticalThreshold)
+                || heapCriticalThreshold <= 0.0
+                || heapCriticalThreshold > 1.0) {
+            throw new IllegalArgumentException("heapCriticalThreshold must be finite and in the range (0, 1]");
+        }
         this.heapCriticalThreshold = heapCriticalThreshold;
     }
 
@@ -166,6 +191,15 @@ public class WatchdogProperties {
     }
 
     public void setMinFreeDiskSpace(DataSize minFreeDiskSpace) {
+        if (minFreeDiskSpace == null || minFreeDiskSpace.toBytes() < 0) {
+            throw new IllegalArgumentException("minFreeDiskSpace must not be negative or null");
+        }
         this.minFreeDiskSpace = minFreeDiskSpace;
+    }
+
+    private static void requirePositiveDuration(Duration duration, String propertyName) {
+        if (duration == null || duration.isZero() || duration.isNegative()) {
+            throw new IllegalArgumentException(propertyName + " must be positive");
+        }
     }
 }
