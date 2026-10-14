@@ -69,16 +69,27 @@ For the Java watchdog's build and run instructions, activation requirements, saf
 
 The separate [`ada-jvm`](ada-jvm/README.md) project is an early bytecode-interpreter prototype, not a Java 25-compatible JVM.
 
-한국어 소개
+## 한국어 안내
 
-Electrical eGov Resilience는 전력망 사이버보안과 국가 핵심 인프라의 복원력 향상을 목표로 하는 무료 오픈소스 연구 프로젝트입니다.
+### 프로젝트 소개
 
-Java, 전자정부 표준프레임워크, Jesus_system 기반 상태 감시 기술을 활용하여 가상 전력망의 장애 분석과 안전한 복구 지원 기술을 연구합니다.
+Electrical eGov Resilience는 전력 인프라의 보안·신뢰성·복원력 향상을 연구하는 무료 오픈소스 프로젝트입니다. 현재 저장소에는 Java 17과 Spring Boot 기반의 J.E.S.U.S(Java Ejectable Survival Unlimited Sustainable System) 감시 프로토타입과 별도의 초기 Ada JVM 바이트코드 해석기 프로젝트가 포함되어 있습니다.
 
-실제 전력설비에 대한 무단 접근이나 자동 제어가 아닌 예방, 감시, 검증, 복원력 향상에 집중합니다.
+전력망 장애 분석, 모니터링, 검증 및 복구 지원을 위한 연구를 지향합니다. 실제 전력 설비를 직접 제어하거나 이에 대한 무단 접근을 수행하는 프로젝트가 아닙니다.
 
-장기적으로 국제 개발자와 연구자가 공동 운영하는 독립적인 비영리 오픈소스 재단으로 발전하는 것을 목표로 합니다.
+### 상태와 안전 안내
 
-함께 검증하고, 함께 복원력을 높입니다.
+이 프로젝트는 초기 개발 단계이며, 운영 환경에 사용할 수 있도록 인증되거나 검증되지 않았습니다. 특히 Java 감시기는 설정에 따라 대상 Java 프로세스를 강제 종료하고 Nix로 재시작을 요청할 수 있습니다. 내장형 자동 구성은 기본적으로 비활성화되어 있지만, 활성화 전에 격리된 환경에서 프로세스 매칭과 복구 설정을 검증해야 합니다.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), [ACCESSIBILITY.md](ACCESSIBILITY.md) and [docs/TRACEABILITY.md](docs/TRACEABILITY.md).
+OpenJML 형식 검증은 현재 실패 횟수 카운터의 계약에만 적용됩니다. Spring 애플리케이션 전체나 운영 환경의 안전성을 증명하지 않습니다. Ada JVM 프로젝트 역시 완전한 JVM 또는 Java 호환 런타임이 아닙니다.
+
+### 문서
+
+- [Java 감시기 사용·설정·모니터 동작 안내 (영문)](README_EN.md)
+- [Ada JVM 프로토타입 안내 (영문)](ada-jvm/README.md)
+- [기여 안내](CONTRIBUTING.md)
+- [보안 취약점 신고 및 보안 정책](SECURITY.md)
+- [접근성 안내](ACCESSIBILITY.md)
+- [요구사항 추적표](docs/TRACEABILITY.md)
+
+장기적으로 국제 개발자와 연구자가 함께 검증하고 협력하는 독립적인 비영리 오픈소스 재단으로 발전하는 것을 지향합니다. 재단은 아직 설립되지 않았습니다.
