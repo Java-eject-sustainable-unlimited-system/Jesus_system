@@ -24,7 +24,9 @@ impl fmt::Display for VmError {
             Self::DivisionByZero => write!(formatter, "integer division by zero"),
             Self::MissingReturn => write!(formatter, "method bytecode ended without ireturn"),
             Self::ReturnWithoutValue => write!(formatter, "ireturn requires a stack value"),
-            Self::UnsupportedOpcode(opcode) => write!(formatter, "unsupported opcode 0x{opcode:02x}"),
+            Self::UnsupportedOpcode(opcode) => {
+                write!(formatter, "unsupported opcode 0x{opcode:02x}")
+            }
         }
     }
 }
@@ -118,8 +120,13 @@ mod tests {
 
     #[test]
     fn preserves_java_integer_overflow_and_division_semantics() {
-        assert_eq!(execute(&[0x05, 0x05, 0x68, 0xac]), Ok(4));
-        assert_eq!(execute(&[0x02, 0x02, 0x6c, 0xac]), Ok(i32::MIN));
+        let mut code = vec![0x10, 127, 0x10, 127, 0x68];
+        for _ in 0..3 {
+            code.extend_from_slice(&[0x10, 127, 0x68]);
+        }
+        code.push(0xac);
+        assert_eq!(execute(&code), Ok(33_034_729));
+        assert_eq!(execute(&[0x10, 0xfb, 0x10, 2, 0x6c, 0xac]), Ok(-2));
     }
 
     #[test]

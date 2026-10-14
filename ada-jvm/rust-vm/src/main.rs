@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
 use std::process::ExitCode;
 
 const MAX_CODE_LENGTH: u64 = 65_536;
@@ -38,9 +38,4 @@ fn run() -> Result<i32, Box<dyn std::error::Error>> {
         return Err("bytecode input exceeds 64 KiB".into());
     }
     Ok(jesus_rust_vm::execute(&code)?)
-}
-
-#[allow(dead_code)]
-fn _assert_read_trait_is_in_scope(_: &mut dyn Read) -> io::Result<()> {
-    Ok(())
 }
