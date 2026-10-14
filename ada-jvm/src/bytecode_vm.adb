@@ -1,8 +1,8 @@
 with Ada.Unchecked_Conversion;
-with Interfaces;
 
 package body Bytecode_VM is
    use type Ada.Streams.Stream_Element;
+   use type Ada.Streams.Stream_Element_Offset;
    use type Interfaces.Integer_32;
    use type Interfaces.Unsigned_32;
 
@@ -64,7 +64,7 @@ package body Bytecode_VM is
          Opcode := Read_Byte;
          case Opcode is
             when 16#02# .. 16#08# =>
-               Push (Interfaces.Integer_32 (Opcode) - 5);
+               Push (Interfaces.Integer_32 (Opcode) - 3);
             when 16#10# =>
                declare
                   Operand : constant Ada.Streams.Stream_Element :=

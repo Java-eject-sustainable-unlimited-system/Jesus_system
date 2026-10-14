@@ -6,10 +6,11 @@ with Ada.Text_IO;
 with Bytecode_VM;
 with Interfaces;
 
-procedure Main is
+procedure Ada_Jvm is
    use Ada.Command_Line;
    use Ada.Streams;
    use Ada.Text_IO;
+   use type Ada.Streams.Stream_IO.Count;
    use type Interfaces.Integer_32;
 
    Max_Code_Length : constant Stream_Element_Offset := 65_536;
@@ -90,4 +91,4 @@ exception
      (Standard_Error,
       Ada.Exceptions.Exception_Information (Error));
       Set_Exit_Status (Failure);
-end Main;
+end Ada_Jvm;

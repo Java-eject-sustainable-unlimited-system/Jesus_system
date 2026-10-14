@@ -1,6 +1,9 @@
 # Maven build output
 target/
 
+# Ada JVM build output
+ada-jvm/build/
+
 # Nix
 result
 result-*
