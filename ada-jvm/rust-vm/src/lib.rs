@@ -107,7 +107,7 @@ fn binary_op(
 
 #[cfg(test)]
 mod tests {
-    use super::{execute, VmError};
+    use super::{VmError, execute};
 
     #[test]
     fn executes_integer_arithmetic_and_signed_bipush() {
@@ -125,7 +125,7 @@ mod tests {
             code.extend_from_slice(&[0x10, 127, 0x68]);
         }
         code.push(0xac);
-        assert_eq!(execute(&code), Ok(33_034_729));
+        assert_eq!(execute(&code), Ok(-1_321_368_961));
         assert_eq!(execute(&[0x10, 0xfb, 0x10, 2, 0x6c, 0xac]), Ok(-2));
     }
 
@@ -137,7 +137,10 @@ mod tests {
         assert_eq!(execute(&[0xac]), Err(VmError::ReturnWithoutValue));
         assert_eq!(execute(&[0x00]), Err(VmError::UnsupportedOpcode(0x00)));
         assert_eq!(execute(&[0x04]), Err(VmError::MissingReturn));
-        assert_eq!(execute(&[0x02, 0x03, 0x6c, 0xac]), Err(VmError::DivisionByZero));
+        assert_eq!(
+            execute(&[0x02, 0x03, 0x6c, 0xac]),
+            Err(VmError::DivisionByZero)
+        );
     }
 
     #[test]

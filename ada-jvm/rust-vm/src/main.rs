@@ -22,10 +22,18 @@ fn run() -> Result<i32, Box<dyn std::error::Error>> {
     let mut arguments = env::args_os();
     let program = arguments.next().unwrap_or_default();
     let Some(path) = arguments.next() else {
-        return Err(format!("usage: {} <raw-method-code-file>", program.to_string_lossy()).into());
+        return Err(format!(
+            "usage: {} <raw-method-code-file>",
+            program.to_string_lossy()
+        )
+        .into());
     };
     if arguments.next().is_some() {
-        return Err(format!("usage: {} <raw-method-code-file>", program.to_string_lossy()).into());
+        return Err(format!(
+            "usage: {} <raw-method-code-file>",
+            program.to_string_lossy()
+        )
+        .into());
     }
 
     let file = File::open(path)?;

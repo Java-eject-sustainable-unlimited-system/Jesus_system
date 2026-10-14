@@ -39,6 +39,9 @@ jobs:
 
           echo " [✨] Build, Packaging & Tests Successful!"
 
+      - name: Test Rust JVM prototype
+        run: cargo test --locked --manifest-path ada-jvm/rust-vm/Cargo.toml
+
   openjml-formal-verification:
     name: OpenJML Formal Verification
     runs-on: ubuntu-latest
