@@ -120,6 +120,7 @@ All watchdog settings use the `jesus.watchdog` prefix. The table lists the defau
 | `probe-timeout` / `http-timeout` | `300ms` / `1500ms` | TCP connect timeout and HTTP request timeout. |
 | `failure-threshold` / `io-failure-threshold` | `3` / `2` | Consecutive failures required for health and I/O ejection. |
 | `heap-critical-threshold` | `0.92` | Watchdog JVM heap usage ratio considered critical. |
+| `remote-jmx-url` / `remote-jmx-timeout` | empty (disabled) / `3s` | JMX URL (loopback host only) of a separately running target JVM, and the hard limit for one diagnostic round trip. A refused or timed-out connection counts as a failure. |
 | `min-free-disk-space` | `500MB` | Minimum available space in the watchdog's current working directory. |
 
 Set these as Spring properties, environment variables, or YAML configuration. The HTTP allowlist compares scheme, host, and port; setting a remote `health-endpoint` without adding its origin to `health-endpoint-allowed-origins` makes the probe fail without sending a request.
@@ -132,11 +133,22 @@ Set these as Spring properties, environment variables, or YAML configuration. Th
 | eGov composite | 2 s | Eject after `failure-threshold` consecutive failures of HTTP or configured `DataSource`; the JDBC check is skipped when no `DataSource` exists. |
 | Raw TCP probe | 1 s | Eject after `failure-threshold` consecutive connection failures. |
 | JVM diagnostics | 5 s | Heap pressure ejects after `failure-threshold` checks; deadlocked threads trigger immediately. |
+| Remote JVM diagnostics (JMX) | 5 s | Only when `remote-jmx-url` is set; unreachable/hung target, heap pressure or deadlocks eject after `failure-threshold` checks. |
 | Disk and I/O guard | 10 s | Low disk space triggers once per low-space incident; failed write probes eject after `io-failure-threshold` failures. |
 
 Threshold counters are maintained independently by each monitor. A successful probe resets its counter, except heap pressure, which recovers one failure at a time when heap use falls below the configured threshold.
 
 Process termination excludes the watchdog's own PID and only matches processes owned by the same OS user. The executable must match `process-command-keyword`, and at least one configured target keyword must appear in the process arguments. Matching processes are forcibly terminated; the configured Nix target is then started if no resurrection is already in progress.
+
+## 🛡️ Failure Domains
+
+| Failure | Responder |
+| --- | --- |
+| Target app JVM failure | This watchdog, running as a separate JVM (set `remote-jmx-url` to inspect the target's internals). |
+| Watchdog JVM exit | OS service manager restart policy, e.g. launchd (`deploy/com.jesus.watchdog.plist`, `KeepAlive`) or systemd `Restart=always`. |
+| OS or power failure | A watchdog/replica on another machine (not provided by this project). |
+
+A live-but-hung process is detected through the JMX timeout and the HTTP/TCP probe timeouts.
 
 ## 🔐 Safety and Access
 

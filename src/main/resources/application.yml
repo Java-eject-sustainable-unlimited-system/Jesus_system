@@ -39,3 +39,6 @@ jesus:
     io-failure-threshold: 2
     heap-critical-threshold: 0.92
     min-free-disk-space: 500MB
+    # Remote JVM diagnostics over JMX (loopback only). Blank = disabled.
+    remote-jmx-url: ""
+    remote-jmx-timeout: 3s

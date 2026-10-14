@@ -57,6 +57,28 @@ public class WatchdogProperties {
     /** Minimum free disk space before emergency ejection. */
     private DataSize minFreeDiskSpace = DataSize.ofMegabytes(500);
 
+    /** JMX service URL of the separately running target JVM; blank disables remote diagnostics. */
+    private String remoteJmxUrl = "";
+
+    /** Hard limit for one remote JMX diagnostic round trip (detects hung targets). */
+    private Duration remoteJmxTimeout = Duration.ofSeconds(3);
+
+    public String getRemoteJmxUrl() {
+        return remoteJmxUrl;
+    }
+
+    public void setRemoteJmxUrl(String remoteJmxUrl) {
+        this.remoteJmxUrl = remoteJmxUrl;
+    }
+
+    public Duration getRemoteJmxTimeout() {
+        return remoteJmxTimeout;
+    }
+
+    public void setRemoteJmxTimeout(Duration remoteJmxTimeout) {
+        this.remoteJmxTimeout = remoteJmxTimeout;
+    }
+
     public String getProcessCommandKeyword() {
         return processCommandKeyword;
     }

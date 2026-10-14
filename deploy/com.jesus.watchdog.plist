@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Keeps the watchdog JVM itself running. Install to ~/Library/LaunchAgents and:
+     launchctl load ~/Library/LaunchAgents/com.jesus.watchdog.plist
+     Adjust the JAR path and JMX URL for your environment. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.jesus.watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/java</string>
+    <string>-jar</string>
+    <string>/opt/jesus/jesus-watchdog.jar</string>
+    <string>--jesus.watchdog.remote-jmx-url=service:jmx:rmi:///jndi/rmi://127.0.0.1:9010/jmxrmi</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardOutPath</key><string>/tmp/jesus-watchdog.out.log</string>
+  <key>StandardErrorPath</key><string>/tmp/jesus-watchdog.err.log</string>
+</dict>
+</plist>
