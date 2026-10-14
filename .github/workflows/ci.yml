@@ -42,6 +42,44 @@ jobs:
       - name: Test Rust JVM prototype
         run: cargo test --locked --manifest-path ada-jvm/rust-vm/Cargo.toml
 
+      - name: Install GNAT and gprbuild
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends gnat gprbuild
+
+      - name: Build and self-test Ada JVM prototype
+        working-directory: ada-jvm
+        run: |
+          gprbuild -P ada_jvm.gpr
+          ./build/bin/ada_jvm --self-test
+
+      - name: Compare Ada and Rust bytecode results
+        working-directory: ada-jvm
+        run: |
+          set -euo pipefail
+          cargo build --locked --manifest-path rust-vm/Cargo.toml
+          ada_vm="$PWD/build/bin/ada_jvm"
+          rust_vm="$PWD/rust-vm/target/debug/jesus-rust-vm"
+          code_file="$(mktemp)"
+          trap 'rm -f "$code_file"' EXIT
+          cases=(
+            '\x10\x08\x10\x05\x60\xac'
+            '\x02\x10\x03\x6c\xac'
+            '\x10\xfd\xac'
+            '\x10\x07\x10\x06\x68\xac'
+            '\x10\x09\x10\x04\x64\xac'
+          )
+          for code in "${cases[@]}"; do
+            printf '%b' "$code" > "$code_file"
+            ada_result="$("$ada_vm" "$code_file" | tr -d '[:space:]')"
+            rust_result="$("$rust_vm" "$code_file" | tr -d '[:space:]')"
+            if [ "$ada_result" != "$rust_result" ]; then
+              echo "Ada/Rust mismatch for bytecode $code: Ada=$ada_result Rust=$rust_result" >&2
+              exit 1
+            fi
+            echo "Ada and Rust agree: $ada_result"
+          done
+
   openjml-formal-verification:
     name: OpenJML Formal Verification
     runs-on: ubuntu-latest
