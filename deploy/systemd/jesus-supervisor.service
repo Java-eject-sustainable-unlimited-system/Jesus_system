@@ -1,0 +1,17 @@
+# Install: sudo cp to /etc/systemd/system/, adjust paths/User, then
+#   systemctl daemon-reload && systemctl enable --now jesus-supervisor
+[Unit]
+Description=Jesus external supervisor (out-of-JVM recovery trigger)
+After=network.target
+
+[Service]
+User=jesus
+WorkingDirectory=/opt/jesus
+Environment=SUPERVISOR_WATCHDOG_RESTART_CMD=/usr/bin/systemctl restart jesus-watchdog
+ExecStart=/usr/bin/java -cp /opt/jesus/jesus-watchdog-agent-1.0.0.jar com.jesus.system.supervisor.ExternalSupervisor
+# The OS service manager restarts the supervisor JVM if it dies.
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -175,3 +175,7 @@ The GitHub Actions workflow runs `mvn clean verify` with Java 17 and separately 
 
 
 ---
+
+## 🛰️ External Supervisor (out-of-JVM recovery)
+
+If the watchdog's own JVM dies, its in-process recovery code stops too. `com.jesus.system.supervisor.ExternalSupervisor` is a separate plain-Java process that (a) runs the target recovery command when the target's TCP port stays unreachable, and (b) runs a watchdog restart command when the watchdog's loopback `/actuator/health` heartbeat fails or times out. Both checks have time limits and act only after `SUPERVISOR_FAILURE_THRESHOLD` consecutive failures, so hung-but-alive JVMs are covered. The supervisor is kept alive by the OS: see `deploy/systemd/jesus-supervisor.service` (Linux) and `deploy/launchd/com.jesus.supervisor.plist` (macOS). Settings are environment variables (see the class Javadoc). Example units are templates; adjust paths and users before use.
