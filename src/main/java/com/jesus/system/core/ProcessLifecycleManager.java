@@ -39,10 +39,18 @@ public class ProcessLifecycleManager {
 
     @Autowired
     public ProcessLifecycleManager(WatchdogProperties properties) {
-        this(properties, target -> new ProcessBuilder("nix", "run", target)
+        this(properties, target -> new ProcessBuilder(launchCommand(properties, target))
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                 .start());
+    }
+
+    static List<String> launchCommand(WatchdogProperties properties, String nixTarget) {
+        List<String> custom = properties.getRestartCommand();
+        if (custom != null && !custom.isEmpty()) {
+            return custom;
+        }
+        return List.of("nix", "run", nixTarget);
     }
 
     ProcessLifecycleManager(WatchdogProperties properties, ProcessStarter processStarter) {

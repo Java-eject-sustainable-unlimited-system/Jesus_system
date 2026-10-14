@@ -121,6 +121,8 @@ All watchdog settings use the `jesus.watchdog` prefix. The table lists the defau
 | `failure-threshold` / `io-failure-threshold` | `3` / `2` | Consecutive failures required for health and I/O ejection. |
 | `heap-critical-threshold` | `0.92` | Watchdog JVM heap usage ratio considered critical. |
 | `remote-jmx-url` / `remote-jmx-timeout` | empty (disabled) / `3s` | JMX URL (loopback host only) of a separately running target JVM, and the hard limit for one diagnostic round trip. A refused or timed-out connection counts as a failure. |
+| `heartbeat-file` / `heartbeat-max-age` | empty (disabled) / `15s` | File the target touches periodically; a missing or older file counts as a hang. |
+| `restart-command` | empty | Optional program and arguments used to relaunch the target instead of the Nix respawn. |
 | `min-free-disk-space` | `500MB` | Minimum available space in the watchdog's current working directory. |
 
 Set these as Spring properties, environment variables, or YAML configuration. The HTTP allowlist compares scheme, host, and port; setting a remote `health-endpoint` without adding its origin to `health-endpoint-allowed-origins` makes the probe fail without sending a request.
@@ -134,6 +136,7 @@ Set these as Spring properties, environment variables, or YAML configuration. Th
 | Raw TCP probe | 1 s | Eject after `failure-threshold` consecutive connection failures. |
 | JVM diagnostics | 5 s | Heap pressure ejects after `failure-threshold` checks; deadlocked threads trigger immediately. |
 | Remote JVM diagnostics (JMX) | 5 s | Only when `remote-jmx-url` is set; unreachable/hung target, heap pressure or deadlocks eject after `failure-threshold` checks. |
+| Heartbeat file | 2 s | Only when `heartbeat-file` is set; stale or missing file ejects after `failure-threshold` checks. |
 | Disk and I/O guard | 10 s | Low disk space triggers once per low-space incident; failed write probes eject after `io-failure-threshold` failures. |
 
 Threshold counters are maintained independently by each monitor. A successful probe resets its counter, except heap pressure, which recovers one failure at a time when heap use falls below the configured threshold.
@@ -145,10 +148,10 @@ Process termination excludes the watchdog's own PID and only matches processes o
 | Failure | Responder |
 | --- | --- |
 | Target app JVM failure | This watchdog, running as a separate JVM (set `remote-jmx-url` to inspect the target's internals). |
-| Watchdog JVM exit | OS service manager restart policy, e.g. launchd (`deploy/com.jesus.watchdog.plist`, `KeepAlive`) or systemd `Restart=always`. |
+| Watchdog JVM exit | OS service manager restart policy, e.g. launchd (`deploy/com.jesus.watchdog.plist`, `KeepAlive`) or systemd (`deploy/jesus-watchdog.service`, `Restart=always`). |
 | OS or power failure | A watchdog/replica on another machine (not provided by this project). |
 
-A live-but-hung process is detected through the JMX timeout and the HTTP/TCP probe timeouts.
+A live-but-hung process is detected through the JMX timeout, the heartbeat file and the HTTP/TCP probe timeouts.
 
 ## 🔐 Safety and Access
 

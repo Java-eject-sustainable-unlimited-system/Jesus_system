@@ -1,0 +1,12 @@
+# systemd unit keeping the watchdog JVM running. Install to /etc/systemd/system/.
+[Unit]
+Description=J.E.S.U.S watchdog
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/java -jar /opt/jesus/jesus-watchdog.jar
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

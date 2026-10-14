@@ -79,6 +79,39 @@ public class WatchdogProperties {
         this.remoteJmxTimeout = remoteJmxTimeout;
     }
 
+    /** Heartbeat file the target touches periodically; blank disables the heartbeat check. */
+    private String heartbeatFile = "";
+
+    /** Maximum age of the heartbeat file before the target is considered hung. */
+    private Duration heartbeatMaxAge = Duration.ofSeconds(15);
+
+    /** Optional command (program + args) used to relaunch the target instead of Nix. */
+    private List<String> restartCommand = new ArrayList<>();
+
+    public String getHeartbeatFile() {
+        return heartbeatFile;
+    }
+
+    public void setHeartbeatFile(String heartbeatFile) {
+        this.heartbeatFile = heartbeatFile;
+    }
+
+    public Duration getHeartbeatMaxAge() {
+        return heartbeatMaxAge;
+    }
+
+    public void setHeartbeatMaxAge(Duration heartbeatMaxAge) {
+        this.heartbeatMaxAge = heartbeatMaxAge;
+    }
+
+    public List<String> getRestartCommand() {
+        return restartCommand;
+    }
+
+    public void setRestartCommand(List<String> restartCommand) {
+        this.restartCommand = restartCommand;
+    }
+
     public String getProcessCommandKeyword() {
         return processCommandKeyword;
     }

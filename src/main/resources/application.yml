@@ -42,3 +42,8 @@ jesus:
     # Remote JVM diagnostics over JMX (loopback only). Blank = disabled.
     remote-jmx-url: ""
     remote-jmx-timeout: 3s
+    # Heartbeat file touched by the target; a stale file means a hung process. Blank = disabled.
+    heartbeat-file: ""
+    heartbeat-max-age: 15s
+    # Optional relaunch command (replaces the Nix respawn), e.g. [ /opt/app/start.sh ]
+    restart-command: []
