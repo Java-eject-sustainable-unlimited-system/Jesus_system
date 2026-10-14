@@ -5,15 +5,15 @@ early JVM implementation project, **not** a Java 25-compatible JVM yet.
 
 ## Current prototype
 
-The prototype interprets a small subset of JVM method bytecode. It supports
+The Ada prototype interprets a small subset of JVM method bytecode. It supports
 `iconst_m1` through `iconst_5`, `bipush`, `iadd`, `isub`, `imul`, `idiv`, and
 `ireturn`. It can also parse a Java class file and extract a selected static
 method's `Code` attribute before interpreting it. Class loading, method
 invocation, and the JVM runtime or Java standard library are not implemented.
 
 The interpreter uses a bounded operand stack and Java `int` arithmetic
-semantics for the supported operations. Input files are raw method-code bytes,
-not Java class files, and are limited to 64 KiB by the command-line runner.
+semantics for the supported operations. Raw method-code files are limited to
+64 KiB by the command-line runner.
 
 ## Build and run
 
@@ -38,6 +38,26 @@ reader accepts class-file versions 45 through 69 and extracts static methods
 only. It does not verify bytecode, resolve classes, or execute the complete JVM
 instruction set. The runner prints the returned integer. `--self-test` runs
 built-in interpreter checks.
+
+## Rust bytecode interpreter
+
+`rust-vm/` contains a dependency-free Rust implementation of the same integer
+bytecode subset. It is a companion interpreter, not an FFI backend for the Ada
+program. Rust's safe slice access and fixed-size operand stack avoid unsafe
+memory operations in this interpreter; this does not make the Ada components
+memory-safe or verify untrusted bytecode.
+
+Install Rust and Cargo, then from this directory:
+
+```sh
+cargo test --locked --manifest-path rust-vm/Cargo.toml
+cargo run --locked --manifest-path rust-vm/Cargo.toml -- method.code
+```
+
+The Rust runner accepts raw method-code bytes only. Class-file parsing and
+static-method extraction remain available through the Ada runner, not Rust.
+Both implementations are limited prototypes and do not constitute a complete
+or Java-compatible JVM.
 
 ## Java 25 compatibility roadmap
 
