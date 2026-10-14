@@ -63,6 +63,8 @@ class WatchdogPropertiesTest {
         assertThatThrownBy(() -> properties.setNixRunTarget(" ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> properties.setProbeTimeout(Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> properties.setProbeTimeout(Duration.ofNanos(1)))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> properties.setProbeTimeout(Duration.ofMillis((long) Integer.MAX_VALUE + 1)))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> properties.setHttpTimeout(null)).isInstanceOf(IllegalArgumentException.class);

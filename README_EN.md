@@ -124,6 +124,8 @@ All watchdog settings use the `jesus.watchdog` prefix. The table lists the defau
 
 Set these as Spring properties, environment variables, or YAML configuration. The HTTP allowlist compares scheme, host, and port; setting a remote `health-endpoint` without adding its origin to `health-endpoint-allowed-origins` makes the probe fail without sending a request.
 
+Invalid runtime settings fail during configuration binding: probe ports must be 1–65535, TCP timeouts must be at least 1 ms and fit the socket API's integer-millisecond limit, HTTP timeouts and ejection thresholds must be positive, and heap thresholds must be finite values in `(0, 1]`.
+
 ## 🔍 Monitor Behavior
 
 | Monitor | Interval | Recovery condition |

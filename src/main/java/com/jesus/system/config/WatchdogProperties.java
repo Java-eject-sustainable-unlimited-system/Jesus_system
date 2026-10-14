@@ -81,7 +81,7 @@ public class WatchdogProperties {
         if (nixRunTarget == null || nixRunTarget.isBlank()) {
             throw new IllegalArgumentException("nixRunTarget must not be blank");
         }
-        this.nixRunTarget = nixRunTarget;
+        this.nixRunTarget = nixRunTarget.trim();
     }
 
     public String getManualControlToken() {
@@ -136,7 +136,8 @@ public class WatchdogProperties {
 
     public void setProbeTimeout(Duration probeTimeout) {
         requirePositiveDuration(probeTimeout, "probeTimeout");
-        if (probeTimeout.compareTo(Duration.ofMillis(Integer.MAX_VALUE)) > 0) {
+        if (probeTimeout.compareTo(Duration.ofMillis(Integer.MAX_VALUE)) > 0
+                || probeTimeout.toMillis() < 1) {
             throw new IllegalArgumentException("probeTimeout must not exceed " + Integer.MAX_VALUE + " milliseconds");
         }
         this.probeTimeout = probeTimeout;
