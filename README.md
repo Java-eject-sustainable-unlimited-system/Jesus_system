@@ -65,6 +65,10 @@ AI 도구가 이 리포지토리 구현의 일부를 작성하는 데 사용되�
 
 For the Java watchdog's build and run instructions, activation requirements, safety notes, monitor behavior, and configuration reference, see [README_EN.md](README_EN.md).
 
+## Experimental Ada JVM Project
+
+The separate [`ada-jvm`](ada-jvm/README.md) project is an early bytecode-interpreter prototype, not a Java 25-compatible JVM.
+
 한국어 소개
 
 Electrical eGov Resilience는 전력망 사이버보안과 국가 핵심 인프라의 복원력 향상을 목표로 하는 무료 오픈소스 연구 프로젝트입니다.
