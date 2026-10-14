@@ -18,29 +18,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      - name: Set up JDK & Maven
-        uses: actions/setup-java@v6
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'maven'
-
-      - name: Verify Maven & Java Version
-        run: |
-          mvn -version
-          java -version
-
-      - name: Build & Test with Maven
-        run: |
-          echo "=================================================="
-          echo " [✝️] Running J.E.S.U.S Maven Verify (Java 17)"
-          echo "=================================================="
-          mvn clean verify
-
-          echo " [✨] Build, Packaging & Tests Successful!"
-
       - name: Test Rust JVM prototype
         run: cargo test --locked --manifest-path ada-jvm/rust-vm/Cargo.toml
+
+      - name: Build Rust JVM prototype
+        run: cargo build --locked --manifest-path ada-jvm/rust-vm/Cargo.toml
 
       - name: Install GNAT and gprbuild
         run: |
@@ -53,11 +35,37 @@ jobs:
           gprbuild -P ada_jvm.gpr
           ./build/bin/ada_jvm --self-test
 
+      - name: Export Ada and Rust interpreter paths
+        working-directory: ada-jvm
+        run: |
+          echo "JESUS_ADA_VM=$PWD/build/bin/ada_jvm" >> "$GITHUB_ENV"
+          echo "JESUS_RUST_VM=$PWD/rust-vm/target/debug/jesus-rust-vm" >> "$GITHUB_ENV"
+
+      - name: Set up JDK & Maven
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Verify Maven & Java Version
+        run: |
+          mvn -version
+          java -version
+
+      - name: Build & Test with Maven and Ada/Rust JVM integration
+        run: |
+          echo "=================================================="
+          echo " [✝️] Running J.E.S.U.S Maven Verify (Java 17)"
+          echo "=================================================="
+          mvn clean verify
+
+          echo " [✨] Build, Packaging & Tests Successful!"
+
       - name: Compare Ada and Rust bytecode results
         working-directory: ada-jvm
         run: |
           set -euo pipefail
-          cargo build --locked --manifest-path rust-vm/Cargo.toml
           ada_vm="$PWD/build/bin/ada_jvm"
           rust_vm="$PWD/rust-vm/target/debug/jesus-rust-vm"
           code_file="$(mktemp)"
