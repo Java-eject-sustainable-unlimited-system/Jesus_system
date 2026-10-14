@@ -77,7 +77,14 @@ public final class AdaRustJvmBridge {
                     .redirectErrorStream(true)
                     .redirectOutput(output.toFile())
                     .start();
-            if (!process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
+            boolean finished;
+            try {
+                finished = process.waitFor(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException error) {
+                process.destroyForcibly();
+                throw error;
+            }
+            if (!finished) {
                 process.destroyForcibly();
                 process.waitFor();
                 throw new IOException("JVM interpreter timed out");

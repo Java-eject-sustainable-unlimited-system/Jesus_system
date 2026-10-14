@@ -59,6 +59,20 @@ static-method extraction remain available through the Ada runner, not Rust.
 Both implementations are limited prototypes and do not constitute a complete
 or Java-compatible JVM.
 
+## Java-hosted integration
+
+`com.jesus.system.jvm.AdaRustJvmBridge` lets Java code invoke both interpreters
+and compare their integer results for the shared bytecode subset. It also lets
+Java invoke Ada's static-method class-file reader. The bridge starts the native
+executables as separate processes; it is not JNI, and it does not make either
+interpreter part of the Java Virtual Machine implementation.
+
+Set `JESUS_ADA_VM` and `JESUS_RUST_VM` to the executable paths before calling
+`AdaRustJvmBridge.fromEnvironment()`. Raw bytecode is limited to 64 KiB and
+interpreter processes have a 10-second timeout. The Nix Linux package supplies
+both paths automatically. CI builds both interpreters first, then runs Java
+integration tests for arithmetic and Ada class-file extraction.
+
 ## Java 25 compatibility roadmap
 
 The target is **Java SE 25 runtime compatibility**, including the Java Virtual

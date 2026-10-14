@@ -166,14 +166,14 @@ nix build .#jesus-server-17
 
 
 
-ℹ️ The first nix build fails with an mvnHash mismatch error — paste the printed hash into flake.nix (mvnHash = "...") and re-run. From then on the build is fully reproducible.
+The Nix package pins the Maven dependency repository and, on Linux, bundles the Ada and Rust interpreter executables for the Java bridge. The Ada/Rust components remain experimental interpreters for a small bytecode subset; they are not a complete JVM and are not JNI backends.
 
 
 
 ## 📊 CI/CD Status
 
 
-The GitHub Actions workflow runs `mvn clean verify` with Java 17 and separately runs OpenJML ESC on `FailureCounter.java`. Formal verification applies to that counter's contracts only, not to Spring or the complete application.
+The GitHub Actions workflow builds the Ada and Rust interpreters before running `mvn clean verify` with Java 17. Java integration tests compare supported bytecode results and exercise Ada class-file extraction. CI separately runs OpenJML ESC on `FailureCounter.java`; formal verification applies to that counter's contracts only, not to Spring or the complete application.
 
 
 ---
