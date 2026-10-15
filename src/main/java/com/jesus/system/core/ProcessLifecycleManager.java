@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -35,28 +38,60 @@ public class ProcessLifecycleManager {
 
     private final WatchdogProperties properties;
     private final ProcessStarter processStarter;
+    private final Clock clock;
     private final AtomicBoolean resurrectionGuard = new AtomicBoolean(false);
+    private final Deque<Instant> recoveryHistory = new ArrayDeque<>();
 
     @Autowired
     public ProcessLifecycleManager(WatchdogProperties properties) {
         this(properties, target -> new ProcessBuilder("nix", "run", target)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                .start());
+                .start(), Clock.systemUTC());
     }
 
     ProcessLifecycleManager(WatchdogProperties properties, ProcessStarter processStarter) {
+        this(properties, processStarter, Clock.systemUTC());
+    }
+
+    ProcessLifecycleManager(WatchdogProperties properties, ProcessStarter processStarter, Clock clock) {
         this.properties = properties;
         this.processStarter = processStarter;
+        this.clock = clock;
     }
 
     /**
      * Full J.E.S.U.S protocol: terminate every matching target process, then respawn via Nix.
      */
     public EjectionReport ejectAndResurrect(String reason) {
+        Instant now = clock.instant();
+        if (!tryAcquireRecoverySlot(now)) {
+            log.warn("[🛑 THROTTLED] Recovery suppressed [reason: {}]: cooldown or per-window limit reached.", reason);
+            return new EjectionReport(reason, 0, false, now, true);
+        }
         int terminated = ejectTargetProcesses(reason);
         boolean respawned = resurrect();
-        return new EjectionReport(reason, terminated, respawned, Instant.now());
+        return new EjectionReport(reason, terminated, respawned, now, false);
+    }
+
+    /**
+     * Records a recovery attempt unless the cooldown has not elapsed or the
+     * per-window limit is exhausted, so false positives cannot cause restart loops.
+     */
+    private synchronized boolean tryAcquireRecoverySlot(Instant now) {
+        Instant windowStart = now.minus(properties.getRecoveryWindow());
+        while (!recoveryHistory.isEmpty() && !recoveryHistory.peekFirst().isAfter(windowStart)) {
+            recoveryHistory.removeFirst();
+        }
+        Instant last = recoveryHistory.peekLast();
+        if (last != null && now.isBefore(last.plus(properties.getRecoveryCooldown()))) {
+            return false;
+        }
+        if (recoveryHistory.size() >= properties.getMaxRecoveriesPerWindow()) {
+            return false;
+        }
+        recoveryHistory.addLast(now);
+        return true;
     }
 
     /**
@@ -166,7 +201,13 @@ public class ProcessLifecycleManager {
             String reason,
             int processesTerminated,
             boolean resurrectionTriggered,
-            Instant timestamp) {
+            Instant timestamp,
+            boolean throttled) {
+
+        public EjectionReport(String reason, int processesTerminated,
+                              boolean resurrectionTriggered, Instant timestamp) {
+            this(reason, processesTerminated, resurrectionTriggered, timestamp, false);
+        }
     }
 
     @FunctionalInterface

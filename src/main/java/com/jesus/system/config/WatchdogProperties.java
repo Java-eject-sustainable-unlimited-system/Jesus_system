@@ -57,6 +57,46 @@ public class WatchdogProperties {
     /** Minimum free disk space before emergency ejection. */
     private DataSize minFreeDiskSpace = DataSize.ofMegabytes(500);
 
+    /** Minimum time between two recovery (eject + resurrect) executions. */
+    private Duration recoveryCooldown = Duration.ofSeconds(30);
+
+    /** Sliding window over which recoveries are counted. */
+    private Duration recoveryWindow = Duration.ofMinutes(10);
+
+    /** Maximum recoveries allowed within the window; stops restart loops. */
+    private int maxRecoveriesPerWindow = 3;
+
+    public Duration getRecoveryCooldown() {
+        return recoveryCooldown;
+    }
+
+    public void setRecoveryCooldown(Duration recoveryCooldown) {
+        if (recoveryCooldown == null || recoveryCooldown.isNegative()) {
+            throw new IllegalArgumentException("recoveryCooldown must not be negative or null");
+        }
+        this.recoveryCooldown = recoveryCooldown;
+    }
+
+    public Duration getRecoveryWindow() {
+        return recoveryWindow;
+    }
+
+    public void setRecoveryWindow(Duration recoveryWindow) {
+        requirePositiveDuration(recoveryWindow, "recoveryWindow");
+        this.recoveryWindow = recoveryWindow;
+    }
+
+    public int getMaxRecoveriesPerWindow() {
+        return maxRecoveriesPerWindow;
+    }
+
+    public void setMaxRecoveriesPerWindow(int maxRecoveriesPerWindow) {
+        if (maxRecoveriesPerWindow < 1) {
+            throw new IllegalArgumentException("maxRecoveriesPerWindow must be positive");
+        }
+        this.maxRecoveriesPerWindow = maxRecoveriesPerWindow;
+    }
+
     public String getProcessCommandKeyword() {
         return processCommandKeyword;
     }

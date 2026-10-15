@@ -54,6 +54,17 @@ class WatchdogCommandControllerTest {
         verify(lifecycleManager).ejectAndResurrect("MANUAL_API_TRIGGER");
     }
 
+    @Test
+    void returnsTooManyRequestsWhenRecoveryIsThrottled() {
+        properties.setManualControlToken("configured-secret");
+        when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER"))
+                .thenReturn(new EjectionReport("MANUAL_API_TRIGGER", 0, false, Instant.EPOCH, true));
+
+        assertThatThrownBy(() -> controller.manualEjectAndResurrect("configured-secret"))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        exception -> assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
+    }
+
     private void assertUnauthorized(String token) {
         assertThatThrownBy(() -> controller.manualEjectAndResurrect(token))
                 .isInstanceOfSatisfying(ResponseStatusException.class,

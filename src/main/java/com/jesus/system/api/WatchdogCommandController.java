@@ -49,6 +49,11 @@ public class WatchdogCommandController {
 
         EjectionReport report = lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER");
 
+        if (report.throttled()) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Recovery suppressed by cooldown or per-window limit");
+        }
+
         return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
                 "action", "EJECT_AND_RESURRECT_EXECUTED",

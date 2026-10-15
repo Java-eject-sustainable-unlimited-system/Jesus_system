@@ -23,6 +23,9 @@ the standalone application into an embedding host.
 | `http-timeout` | `1500ms` | HTTP connection/request timeout; must be positive. |
 | `failure-threshold` | `3` | Consecutive failures required by HTTP, composite eGov, TCP, and heap-pressure monitors; must be positive. |
 | `io-failure-threshold` | `2` | Consecutive failed write probes required for I/O ejection; must be positive. |
+| `recovery-cooldown` | `30s` | Minimum time between recoveries; must not be negative. |
+| `recovery-window` | `10m` | Sliding window used to count recoveries; must be positive. |
+| `max-recoveries-per-window` | `3` | Recoveries allowed per window before further ones are suppressed (restart-loop guard); must be positive. |
 | `heap-critical-threshold` | `0.92` | Heap-use ratio considered critical, from greater than zero through 1.0 inclusive. |
 | `min-free-disk-space` | `500MB` | Minimum usable space in the watchdog's current working directory. The value cannot be negative. |
 

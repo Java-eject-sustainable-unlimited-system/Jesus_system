@@ -39,3 +39,7 @@ jesus:
     io-failure-threshold: 2
     heap-critical-threshold: 0.92
     min-free-disk-space: 500MB
+    # Recovery rate limits (guard against restart loops caused by false positives)
+    recovery-cooldown: 30s
+    recovery-window: 10m
+    max-recoveries-per-window: 3
