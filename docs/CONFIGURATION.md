@@ -26,6 +26,8 @@ the standalone application into an embedding host.
 | `recovery-cooldown` | `30s` | Minimum time between recoveries; must not be negative. |
 | `recovery-window` | `10m` | Sliding window used to count recoveries; must be positive. |
 | `max-recoveries-per-window` | `3` | Recoveries allowed per window before further ones are suppressed (restart-loop guard); must be positive. |
+| `max-target-processes` | `5` | A recovery is refused (nothing killed) if more processes match the target keywords; must be positive. |
+| `dry-run` | `false` | Log intended recoveries without killing or respawning anything. |
 | `heap-critical-threshold` | `0.92` | Heap-use ratio considered critical, from greater than zero through 1.0 inclusive. |
 | `min-free-disk-space` | `500MB` | Minimum usable space in the watchdog's current working directory. The value cannot be negative. |
 

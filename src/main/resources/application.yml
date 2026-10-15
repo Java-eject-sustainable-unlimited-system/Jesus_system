@@ -43,3 +43,7 @@ jesus:
     recovery-cooldown: 30s
     recovery-window: 10m
     max-recoveries-per-window: 3
+    # Refuse to kill if more processes than this match the keywords (over-broad match guard)
+    max-target-processes: 5
+    # Log what would happen without killing or respawning anything
+    dry-run: false

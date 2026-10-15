@@ -69,7 +69,18 @@ public class ProcessLifecycleManager {
             log.warn("[🛑 THROTTLED] Recovery suppressed [reason: {}]: cooldown or per-window limit reached.", reason);
             return new EjectionReport(reason, 0, false, now, true);
         }
-        int terminated = ejectTargetProcesses(reason);
+        List<ProcessHandle> targets = findTargetProcesses();
+        if (targets.size() > properties.getMaxTargetProcesses()) {
+            log.error("[🛑 REFUSED] {} processes match the target keywords (limit {}); keywords too broad, nothing killed [reason: {}].",
+                    targets.size(), properties.getMaxTargetProcesses(), reason);
+            return new EjectionReport(reason, 0, false, now, true);
+        }
+        if (properties.isDryRun()) {
+            log.warn("[🧪 DRY-RUN] Would terminate {} process(es) and respawn via Nix [reason: {}].",
+                    targets.size(), reason);
+            return new EjectionReport(reason, 0, false, now, false);
+        }
+        int terminated = terminate(targets, reason);
         boolean respawned = resurrect();
         return new EjectionReport(reason, terminated, respawned, now, false);
     }
@@ -100,7 +111,10 @@ public class ProcessLifecycleManager {
      * @return number of processes terminated
      */
     public int ejectTargetProcesses(String reason) {
-        List<ProcessHandle> targets = findTargetProcesses();
+        return terminate(findTargetProcesses(), reason);
+    }
+
+    private int terminate(List<ProcessHandle> targets, String reason) {
         int terminated = 0;
         for (ProcessHandle process : targets) {
             log.warn("[🗡️ EJECT] Terminating PID {} [reason: {}]", process.pid(), reason);

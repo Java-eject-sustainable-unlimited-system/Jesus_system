@@ -145,6 +145,56 @@ class ProcessLifecycleManagerTest {
         assertThat(launches).hasValue(3);
     }
 
+    @Test
+    void refusesToKillWhenTooManyProcessesMatch() {
+        WatchdogProperties props = new WatchdogProperties();
+        props.setMaxTargetProcesses(1);
+        AtomicInteger launches = new AtomicInteger();
+        ProcessHandle a = mock(ProcessHandle.class);
+        ProcessHandle b = mock(ProcessHandle.class);
+        ProcessLifecycleManager broad = new ProcessLifecycleManager(props, t -> {
+            launches.incrementAndGet();
+            return mock(Process.class);
+        }) {
+            @Override
+            public List<ProcessHandle> findTargetProcesses() {
+                return List.of(a, b);
+            }
+        };
+
+        var report = broad.ejectAndResurrect("test");
+
+        assertThat(report.throttled()).isTrue();
+        assertThat(report.processesTerminated()).isZero();
+        assertThat(launches).hasValue(0);
+        org.mockito.Mockito.verify(a, org.mockito.Mockito.never()).destroyForcibly();
+        org.mockito.Mockito.verify(b, org.mockito.Mockito.never()).destroyForcibly();
+    }
+
+    @Test
+    void dryRunKillsAndRespawnsNothing() {
+        WatchdogProperties props = new WatchdogProperties();
+        props.setDryRun(true);
+        AtomicInteger launches = new AtomicInteger();
+        ProcessHandle a = mock(ProcessHandle.class);
+        ProcessLifecycleManager dry = new ProcessLifecycleManager(props, t -> {
+            launches.incrementAndGet();
+            return mock(Process.class);
+        }) {
+            @Override
+            public List<ProcessHandle> findTargetProcesses() {
+                return List.of(a);
+            }
+        };
+
+        var report = dry.ejectAndResurrect("test");
+
+        assertThat(report.processesTerminated()).isZero();
+        assertThat(report.resurrectionTriggered()).isFalse();
+        assertThat(launches).hasValue(0);
+        org.mockito.Mockito.verify(a, org.mockito.Mockito.never()).destroyForcibly();
+    }
+
     private static final class MutableClock extends Clock {
         private Instant now = Instant.parse("2026-01-01T00:00:00Z");
 

@@ -120,6 +120,7 @@ All watchdog settings use the `jesus.watchdog` prefix. The table lists the defau
 | `probe-timeout` / `http-timeout` | `300ms` / `1500ms` | TCP connect timeout and HTTP request timeout. |
 | `failure-threshold` / `io-failure-threshold` | `3` / `2` | Consecutive failures required for health and I/O ejection. |
 | `recovery-cooldown` / `recovery-window` / `max-recoveries-per-window` | `30s` / `10m` / `3` | Rate limits on eject-and-resurrect; suppressed recoveries are logged and the manual API returns HTTP 429. |
+| `max-target-processes` / `dry-run` | `5` / `false` | Refuse recovery when too many processes match; dry-run logs without acting. |
 | `heap-critical-threshold` | `0.92` | Watchdog JVM heap usage ratio considered critical. |
 | `min-free-disk-space` | `500MB` | Minimum available space in the watchdog's current working directory. |
 

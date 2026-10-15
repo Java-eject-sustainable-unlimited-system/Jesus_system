@@ -66,6 +66,31 @@ public class WatchdogProperties {
     /** Maximum recoveries allowed within the window; stops restart loops. */
     private int maxRecoveriesPerWindow = 3;
 
+    /** Maximum matching processes a single recovery may kill; more is treated as an over-broad match. */
+    private int maxTargetProcesses = 5;
+
+    /** When true, recoveries are logged but no process is killed or respawned. */
+    private boolean dryRun = false;
+
+    public int getMaxTargetProcesses() {
+        return maxTargetProcesses;
+    }
+
+    public void setMaxTargetProcesses(int maxTargetProcesses) {
+        if (maxTargetProcesses < 1) {
+            throw new IllegalArgumentException("maxTargetProcesses must be positive");
+        }
+        this.maxTargetProcesses = maxTargetProcesses;
+    }
+
+    public boolean isDryRun() {
+        return dryRun;
+    }
+
+    public void setDryRun(boolean dryRun) {
+        this.dryRun = dryRun;
+    }
+
     public Duration getRecoveryCooldown() {
         return recoveryCooldown;
     }
