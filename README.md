@@ -91,5 +91,8 @@ OpenJML 형식 검증은 현재 실패 횟수 카운터의 계약에만 적용�
 - [보안 취약점 신고 및 보안 정책](SECURITY.md)
 - [접근성 안내](ACCESSIBILITY.md)
 - [요구사항 추적표](docs/TRACEABILITY.md)
+- [Java 감시기 아키텍처 안내 (영문)](docs/ARCHITECTURE.md)
+- [Java 감시기 전체 설정 레퍼런스 (영문)](docs/CONFIGURATION.md)
+- [운영·문제 해결 안내 (영문)](docs/OPERATIONS.md)
 
 장기적으로 국제 개발자와 연구자가 함께 검증하고 협력하는 독립적인 비영리 오픈소스 재단으로 발전하는 것을 지향합니다. 재단은 아직 설립되지 않았습니다.
