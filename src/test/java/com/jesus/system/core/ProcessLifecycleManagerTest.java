@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,12 +25,12 @@ class ProcessLifecycleManagerTest {
     void matchesLegacyJavaProcess() {
         assertThat(ProcessLifecycleManager.matchesTarget(
                 "/usr/bin/java", new String[]{"-jar", "/opt/egovframe/egov-app.war"},
-                "java", List.of("egov", "tomcat")))
+                "java", List.of("/opt/egovframe/egov-app.war")))
                 .isTrue();
 
         assertThat(ProcessLifecycleManager.matchesTarget(
-                "java", new String[]{"-Dcatalina.base=/opt/tomcat"},
-                "java", List.of("egov", "tomcat")))
+                "java", new String[]{"tomcat"},
+                "java", List.of("tomcat")))
                 .isTrue();
     }
 
@@ -61,7 +64,22 @@ class ProcessLifecycleManagerTest {
     @Test
     void matchingIsCaseInsensitive() {
         assertThat(ProcessLifecycleManager.matchesTarget(
-                "JAVA", new String[]{"-jar", "EGOV-APP.war"}, "java", List.of("egov")))
+                "JAVA", new String[]{"-jar", "EGOV-APP.war"}, "java", List.of("egov-app.war")))
+                .isTrue();
+    }
+
+    @Test
+    void rejectsArgumentSubstringsAndCanRequireAnExactExecutablePath() {
+        assertThat(ProcessLifecycleManager.matchesTarget(
+                "java", new String[]{"-Dcatalina.base=/opt/tomcat"}, "java", List.of("tomcat")))
+                .isFalse();
+        assertThat(ProcessLifecycleManager.matchesTarget(
+                "/opt/jdk/bin/java", new String[]{"-jar", "/opt/egov/app.war"},
+                "/usr/bin/java", List.of("/opt/egov/app.war")))
+                .isFalse();
+        assertThat(ProcessLifecycleManager.matchesTarget(
+                "/usr/bin/java", new String[]{"-jar", "/opt/egov/app.war"},
+                "/usr/bin/java", List.of("/opt/egov/app.war")))
                 .isTrue();
     }
 
@@ -107,5 +125,64 @@ class ProcessLifecycleManagerTest {
 
         assertThat(retryingManager.resurrect()).isFalse();
         assertThat(retryingManager.resurrect()).isTrue();
+    }
+
+    @Test
+    void serializesEjectionAndResurrectionAsOneLifecycleOperation() throws Exception {
+        CountDownLatch launchStarted = new CountDownLatch(1);
+        CountDownLatch allowLaunch = new CountDownLatch(1);
+        Process process = mock(Process.class);
+        when(process.onExit()).thenReturn(new CompletableFuture<>());
+        ProcessLifecycleManager guardedManager = new ProcessLifecycleManager(properties, target -> {
+            launchStarted.countDown();
+            try {
+                if (!allowLaunch.await(2, TimeUnit.SECONDS)) {
+                    throw new IOException("Timed out waiting to release test launch");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException(e);
+            }
+            return process;
+        });
+        FutureTask<ProcessLifecycleManager.EjectionReport> firstRecovery =
+                new FutureTask<>(() -> guardedManager.ejectAndResurrect("first"));
+        Thread recoveryThread = new Thread(firstRecovery);
+        recoveryThread.start();
+
+        assertThat(launchStarted.await(1, TimeUnit.SECONDS)).isTrue();
+        ProcessLifecycleManager.EjectionReport overlapping =
+                guardedManager.ejectAndResurrect("overlapping");
+
+        assertThat(overlapping.operationAccepted()).isFalse();
+        allowLaunch.countDown();
+        ProcessLifecycleManager.EjectionReport first = firstRecovery.get(1, TimeUnit.SECONDS);
+        assertThat(first.operationAccepted()).isTrue();
+        assertThat(first.terminationSuccessful()).isTrue();
+        assertThat(first.resurrectionTriggered()).isTrue();
+    }
+
+    @Test
+    void doesNotResurrectWhenTargetTerminationIsUnconfirmed() {
+        ProcessHandle target = mock(ProcessHandle.class);
+        when(target.pid()).thenReturn(42L);
+        when(target.destroyForcibly()).thenThrow(new UnsupportedOperationException("termination denied"));
+        AtomicInteger launches = new AtomicInteger();
+        ProcessLifecycleManager guardedManager = new ProcessLifecycleManager(properties, targetName -> {
+            launches.incrementAndGet();
+            return mock(Process.class);
+        }) {
+            @Override
+            public List<ProcessHandle> findTargetProcesses() {
+                return List.of(target);
+            }
+        };
+
+        ProcessLifecycleManager.EjectionReport report = guardedManager.ejectAndResurrect("failed termination");
+
+        assertThat(report.operationAccepted()).isTrue();
+        assertThat(report.terminationSuccessful()).isFalse();
+        assertThat(report.resurrectionTriggered()).isFalse();
+        assertThat(launches).hasValue(0);
     }
 }

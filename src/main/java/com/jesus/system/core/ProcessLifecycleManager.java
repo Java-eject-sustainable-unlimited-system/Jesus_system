@@ -7,14 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Single place that knows how to eject (SIGKILL) a frozen legacy target
@@ -57,7 +57,14 @@ public class ProcessLifecycleManager {
             return new EjectionReport(reason, false, false, 0, false, Instant.now());
         }
 
-        TerminationResult termination = ejectTargetProcessesWhileLocked(reason);
+        TerminationResult termination;
+        try {
+            termination = ejectTargetProcessesWhileLocked(reason);
+        } catch (RuntimeException e) {
+            lifecycleGuard.set(false);
+            log.error("[💥] Failed to enumerate or terminate target processes: {}", e.getMessage());
+            return new EjectionReport(reason, true, false, 0, false, Instant.now());
+        }
         boolean respawned = termination.successful() && startResurrectionWhileLocked();
         if (!respawned) {
             lifecycleGuard.set(false);

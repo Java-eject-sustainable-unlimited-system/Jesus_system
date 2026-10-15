@@ -14,10 +14,10 @@ import java.util.List;
 @ConfigurationProperties(prefix = "jesus.watchdog")
 public class WatchdogProperties {
 
-    /** Command substring identifying a JVM process (e.g. "java"). */
+    /** Exact executable path, or executable basename (e.g. "java"), identifying a JVM process. */
     private String processCommandKeyword = "java";
 
-    /** Argument substrings identifying the monitored legacy target processes. */
+    /** Exact command-line arguments identifying monitored legacy target processes. */
     private List<String> targetProcessKeywords = new ArrayList<>(List.of("egov", "tomcat"));
 
     /** Nix flake app used to respawn the target after ejection. */

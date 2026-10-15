@@ -110,8 +110,8 @@ All watchdog settings use the `jesus.watchdog` prefix. The table lists the defau
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `enabled` | `false` for embedded auto-configuration; `true` in standalone `application.yml` | Explicitly opts into watchdog registration and scheduled monitoring. |
-| `process-command-keyword` | `java` | Required Java executable name when matching target processes. |
-| `target-process-keywords` | `[egov, tomcat]` | A matching process must contain at least one keyword in its arguments. |
+| `process-command-keyword` | `java` | Required executable basename, or an exact executable path when configured with a path. |
+| `target-process-keywords` | `[egov, tomcat]` | Legacy property name; a match requires one configured value to equal a complete process argument. Prefer a unique application path or service identifier. |
 | `nix-run-target` | `.#jesus-server-17` | Nix flake target started after ejection. |
 | `manual-control-token` | empty | Shared secret required by the manual control endpoint. Configure via `JESUS_WATCHDOG_MANUAL_CONTROL_TOKEN`. |
 | `health-endpoint` | `http://localhost:8080/actuator/health` | HTTP(S) endpoint probed for target health. |
@@ -140,12 +140,13 @@ Threshold counters are maintained independently by each monitor. A successful pr
 
 The default scheduler uses five worker threads so a blocked monitor does not occupy the worker needed by another monitor. Unexpected task exceptions are logged and do not stop that monitor's future scheduled checks. An embedding application can provide its own `TaskScheduler`; it should also reserve enough workers to avoid coupling these checks.
 
-Process termination excludes the watchdog's own PID and only matches processes owned by the same OS user. The executable must match `process-command-keyword`, and at least one configured target keyword must appear in the process arguments. Matching processes are forcibly terminated; the configured Nix target is then started if no resurrection is already in progress.
+Process termination excludes the watchdog's own PID and only matches processes owned by the same OS user. The executable must match `process-command-keyword`, and a configured target value must exactly match a complete process argument. Matching processes are forcibly terminated; the Nix target is started only after every matched process confirms termination. A lifecycle guard rejects overlapping recovery requests until the launched process exits.
 
 ## 🔐 Safety and Access
 
 * Watchdog activation enables scheduled checks that can terminate processes. Test process matching and recovery configuration in an isolated environment before enabling it against real services.
 * The manual API accepts only `POST /api/jesus/eject-and-resurrect` with an `X-Watchdog-Token` value equal to the configured token. It returns `401 Unauthorized` if the token is unset or incorrect.
+* The manual API returns `202 Accepted` when launch is triggered, `409 Conflict` when another lifecycle operation is in progress, or `503 Service Unavailable` when termination or launch fails. Launch being triggered does not mean the target is healthy.
 * The standalone server binds to loopback and exposes only the Actuator health endpoint over HTTP by default. Avoid exposing the manual API to untrusted networks.
 * `/actuator/health` describes this watchdog's reported monitor vitals; it is not a direct health response from the monitored target.
 * The project is early-stage, uncertified, and not ready for operational deployment.

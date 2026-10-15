@@ -13,12 +13,15 @@ an isolated environment.
    unless the host explicitly opts in; the standalone sample opts in, so
    review its configuration before running it.
 3. Identify exactly which same-user Java processes can be matched. The
-   executable must match `process-command-keyword`, and at least one
-   `target-process-keywords` entry must appear in the process arguments.
-   Confirm that the watchdog's own process cannot be selected.
+   executable must match `process-command-keyword` (set a full path to require
+   that exact executable), and a `target-process-keywords` value must exactly
+   match a complete process argument. Use a unique application path or service
+   identifier, not a broad word. Confirm that the watchdog's own process cannot
+   be selected.
 4. Confirm that `nix run <nix-run-target>` starts only the intended disposable
-   test target. The watchdog starts this command after ejection but does not
-   check whether the replacement is ready.
+   test target. Concurrent recovery requests are rejected while ejection or
+   the launched process is in progress. The watchdog starts this command after
+   confirmed termination but does not check whether the replacement is ready.
 5. Set the health endpoint, TCP address, timeout, and HTTP origin allowlist
    for the test target. An endpoint outside the allowlist will fail without a
    request being sent.

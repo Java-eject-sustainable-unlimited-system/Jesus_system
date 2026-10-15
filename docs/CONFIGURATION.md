@@ -11,8 +11,8 @@ the standalone application into an embedding host.
 | Setting | Default | Meaning and constraints |
 | --- | --- | --- |
 | `enabled` | `false` for embedded auto-configuration; `true` in the standalone app | Explicitly registers the watchdog and schedules its checks. Keep this disabled unless destructive process recovery is intentional. |
-| `process-command-keyword` | `java` | Required executable basename for process matching. Matching is case-insensitive; an executable may also end in `.exe`. |
-| `target-process-keywords` | `[egov, tomcat]` | A candidate process must contain at least one non-empty keyword in its arguments. Matching is case-insensitive. |
+| `process-command-keyword` | `java` | Required executable basename for process matching, or an exact executable path when configured with a path. Matching is case-insensitive; a basename may also end in `.exe`. |
+| `target-process-keywords` | `[egov, tomcat]` | Legacy property name; a candidate must have at least one configured value as a complete command-line argument. Matching is case-insensitive, not substring-based. Prefer a unique application path or service identifier as the value. |
 | `nix-run-target` | `.#jesus-server-17` | Argument passed to `nix run` after ejection. It must not be blank. |
 | `manual-control-token` | empty | Shared token required by the manual endpoint. An empty value disables successful authorization. |
 | `health-endpoint` | `http://localhost:8080/actuator/health` | HTTP(S) URL queried by the HTTP monitors. |

@@ -65,16 +65,22 @@ the watchdog's aggregate status, not the target's health URL.
    needed.
 2. `ProcessLifecycleManager` enumerates local processes and excludes the
    watchdog's own PID.
-3. A candidate must be owned by the same OS user, have an executable basename
-   matching `process-command-keyword` (with optional `.exe`), and have at least
-   one configured target keyword in its arguments. Matching is
-   case-insensitive.
+3. A candidate must be owned by the same OS user, match `process-command-keyword`
+   as an executable basename (with optional `.exe`) or exact configured path,
+   and have a complete argument exactly matching a configured target value.
+   Matching is case-insensitive.
 4. The manager requests forcible termination for each match and waits up to
-   five seconds for confirmation per process.
-5. It invokes `nix run <nix-run-target>` unless a Nix-launched process is
-   already being tracked as running. Launching the command is not a readiness
-   check: the watchdog does not verify that the replacement service became
-   healthy before reporting that the launch was triggered.
+   five seconds for confirmation per process. It does not launch a replacement
+   if any target fails to confirm termination.
+5. One lifecycle guard covers ejection and Nix launch; concurrent triggers are
+   rejected until the launched process exits. Launching the command is not a
+   readiness check: the watchdog does not verify that the replacement service
+   became healthy before reporting that launch was triggered.
+
+The manual endpoint reports `202 Accepted` when the Nix launch is triggered,
+`409 Conflict` when another lifecycle operation is in progress, and
+`503 Service Unavailable` when termination or launch fails. These responses do
+not establish that the replacement service is healthy.
 
 These actions are destructive. A broad process keyword or incorrect target can
 terminate an unintended same-user Java process. Validate process matching,

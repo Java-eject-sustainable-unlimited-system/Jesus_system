@@ -42,16 +42,52 @@ class WatchdogCommandControllerTest {
     @Test
     void executesManualEjectionOnlyWithConfiguredToken() {
         properties.setManualControlToken("configured-secret");
-        EjectionReport report = new EjectionReport("MANUAL_API_TRIGGER", 2, true, Instant.EPOCH);
+        EjectionReport report =
+                new EjectionReport("MANUAL_API_TRIGGER", true, true, 2, true, Instant.EPOCH);
         when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER")).thenReturn(report);
 
         var response = controller.manualEjectAndResurrect("configured-secret");
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody())
+                .containsEntry("status", "RESURRECTION_TRIGGERED")
+                .containsEntry("operationAccepted", true)
+                .containsEntry("terminationSuccessful", true)
                 .containsEntry("processesTerminated", 2)
                 .containsEntry("resurrectionTriggered", true);
         verify(lifecycleManager).ejectAndResurrect("MANUAL_API_TRIGGER");
+    }
+
+    @Test
+    void reportsFailedRecoveryInsteadOfSuccess() {
+        properties.setManualControlToken("configured-secret");
+        EjectionReport report =
+                new EjectionReport("MANUAL_API_TRIGGER", true, false, 1, false, Instant.EPOCH);
+        when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER")).thenReturn(report);
+
+        var response = controller.manualEjectAndResurrect("configured-secret");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody())
+                .containsEntry("status", "FAILED")
+                .containsEntry("terminationSuccessful", false)
+                .containsEntry("resurrectionTriggered", false);
+    }
+
+    @Test
+    void reportsAnOverlappingRecoveryAsConflict() {
+        properties.setManualControlToken("configured-secret");
+        EjectionReport report =
+                new EjectionReport("MANUAL_API_TRIGGER", false, false, 0, false, Instant.EPOCH);
+        when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER")).thenReturn(report);
+
+        var response = controller.manualEjectAndResurrect("configured-secret");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody())
+                .containsEntry("status", "IN_PROGRESS")
+                .containsEntry("operationAccepted", false)
+                .containsEntry("resurrectionTriggered", false);
     }
 
     private void assertUnauthorized(String token) {
