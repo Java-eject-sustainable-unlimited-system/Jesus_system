@@ -150,6 +150,16 @@ Process termination excludes the watchdog's own PID and only matches processes o
 * `/actuator/health` describes this watchdog's reported monitor vitals; it is not a direct health response from the monitored target.
 * The project is early-stage, uncertified, and not ready for operational deployment.
 
+## 📚 Detailed Guides
+
+* [Watchdog architecture and recovery lifecycle](docs/ARCHITECTURE.md)
+* [Complete configuration reference](docs/CONFIGURATION.md)
+* [Operations and troubleshooting](docs/OPERATIONS.md)
+* [Requirements traceability](docs/TRACEABILITY.md)
+* [Contributing and formal verification](CONTRIBUTING.md)
+* [Security policy](SECURITY.md)
+* [Accessibility statement](ACCESSIBILITY.md)
+* [Experimental Ada and Rust interpreter guide](ada-jvm/README.md)
 
 🧪 Test & Formal Verification (Nix)
 
