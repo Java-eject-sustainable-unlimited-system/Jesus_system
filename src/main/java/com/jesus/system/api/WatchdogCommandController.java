@@ -48,12 +48,30 @@ public class WatchdogCommandController {
         log.warn("[⚠️ EMERGENCY] Authenticated manual ejection requested via API.");
 
         EjectionReport report = lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER");
+        HttpStatus responseStatus;
+        String status;
+        if (!report.accepted()) {
+            responseStatus = HttpStatus.CONFLICT;
+            status = "REJECTED";
+        } else if (!report.terminationConfirmed()) {
+            responseStatus = HttpStatus.BAD_GATEWAY;
+            status = "TERMINATION_FAILED";
+        } else if (!report.resurrectionTriggered()) {
+            responseStatus = HttpStatus.BAD_GATEWAY;
+            status = "RESTART_FAILED";
+        } else {
+            responseStatus = HttpStatus.ACCEPTED;
+            status = "RESTART_TRIGGERED";
+        }
 
-        return ResponseEntity.ok(Map.of(
-                "status", "SUCCESS",
+        return ResponseEntity.status(responseStatus).body(Map.of(
+                "status", status,
                 "action", "EJECT_AND_RESURRECT_EXECUTED",
+                "accepted", report.accepted(),
+                "terminationConfirmed", report.terminationConfirmed(),
                 "processesTerminated", report.processesTerminated(),
                 "resurrectionTriggered", report.resurrectionTriggered(),
+                "serviceHealth", "UNVERIFIED",
                 "timestamp", report.timestamp().toEpochMilli()
         ));
     }

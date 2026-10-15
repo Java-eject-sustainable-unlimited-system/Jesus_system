@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>Replaces the eject/resurrect logic previously copy-pasted across
  * every watchdog service, and guards against concurrent monitors stacking
- * duplicate resurrections.
+ * overlapping recovery operations.
  */
 @Component
 public class ProcessLifecycleManager {
@@ -35,7 +35,7 @@ public class ProcessLifecycleManager {
 
     private final WatchdogProperties properties;
     private final ProcessStarter processStarter;
-    private final AtomicBoolean resurrectionGuard = new AtomicBoolean(false);
+    private final AtomicBoolean lifecycleGuard = new AtomicBoolean(false);
 
     @Autowired
     public ProcessLifecycleManager(WatchdogProperties properties) {
@@ -54,9 +54,29 @@ public class ProcessLifecycleManager {
      * Full J.E.S.U.S protocol: terminate every matching target process, then respawn via Nix.
      */
     public EjectionReport ejectAndResurrect(String reason) {
-        int terminated = ejectTargetProcesses(reason);
-        boolean respawned = resurrect();
-        return new EjectionReport(reason, terminated, respawned, Instant.now());
+        if (!lifecycleGuard.compareAndSet(false, true)) {
+            log.info("[⚡ RECOVERY] Recovery already in progress, skipping duplicate trigger.");
+            return new EjectionReport(reason, false, false, 0, false, Instant.now());
+        }
+
+        EjectionOutcome ejection;
+        try {
+            ejection = ejectTargetProcessesInternal(reason);
+        } catch (RuntimeException e) {
+            lifecycleGuard.set(false);
+            log.error("[💥 EJECT] Failed to inspect or terminate target processes: {}", e.getMessage());
+            return new EjectionReport(reason, true, false, 0, false, Instant.now());
+        }
+
+        if (!ejection.terminationConfirmed()) {
+            lifecycleGuard.set(false);
+            return new EjectionReport(reason, true, false,
+                    ejection.processesTerminated(), false, Instant.now());
+        }
+
+        boolean respawned = resurrectWhileGuarded();
+        return new EjectionReport(reason, true, ejection.terminationConfirmed(),
+                ejection.processesTerminated(), respawned, Instant.now());
     }
 
     /**
@@ -65,8 +85,21 @@ public class ProcessLifecycleManager {
      * @return number of processes terminated
      */
     public int ejectTargetProcesses(String reason) {
+        if (!lifecycleGuard.compareAndSet(false, true)) {
+            log.info("[⚡ EJECT] Recovery already in progress, skipping duplicate ejection.");
+            return 0;
+        }
+        try {
+            return ejectTargetProcessesInternal(reason).processesTerminated();
+        } finally {
+            lifecycleGuard.set(false);
+        }
+    }
+
+    private EjectionOutcome ejectTargetProcessesInternal(String reason) {
         List<ProcessHandle> targets = findTargetProcesses();
         int terminated = 0;
+        boolean terminationConfirmed = true;
         for (ProcessHandle process : targets) {
             log.warn("[🗡️ EJECT] Terminating PID {} [reason: {}]", process.pid(), reason);
             try {
@@ -76,12 +109,14 @@ public class ProcessLifecycleManager {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("[🗡️ EJECT] Interrupted while waiting for PID {} to exit.", process.pid());
+                terminationConfirmed = false;
                 break;
             } catch (TimeoutException | ExecutionException | RuntimeException e) {
                 log.error("[💥] PID {} did not confirm termination: {}", process.pid(), e.getMessage());
+                terminationConfirmed = false;
             }
         }
-        return terminated;
+        return new EjectionOutcome(terminated, terminationConfirmed);
     }
 
     /**
@@ -91,18 +126,22 @@ public class ProcessLifecycleManager {
      * @return true if a respawn was actually triggered
      */
     public boolean resurrect() {
-        if (!resurrectionGuard.compareAndSet(false, true)) {
-            log.info("[⚡ RESURRECT] Resurrection already in progress, skipping duplicate trigger.");
+        if (!lifecycleGuard.compareAndSet(false, true)) {
+            log.info("[⚡ RESURRECT] Recovery already in progress, skipping duplicate trigger.");
             return false;
         }
+        return resurrectWhileGuarded();
+    }
+
+    private boolean resurrectWhileGuarded() {
         try {
             log.info("[⚡ RESURRECT] Spawning fresh instance via Nix: {}", properties.getNixRunTarget());
             Process process = processStarter.start(properties.getNixRunTarget());
-            process.onExit().whenComplete((finished, failure) -> resurrectionGuard.set(false));
+            process.onExit().whenComplete((finished, failure) -> lifecycleGuard.set(false));
             log.info("[✨] Resurrection trigger dispatched successfully.");
             return true;
         } catch (IOException | RuntimeException e) {
-            resurrectionGuard.set(false);
+            lifecycleGuard.set(false);
             log.error("[💥 CRITICAL] Failed to resurrect target via Nix: {}", e.getMessage());
             return false;
         }
@@ -145,10 +184,10 @@ public class ProcessLifecycleManager {
         }
 
         String normalizedCommand = (command == null ? "" : command).toLowerCase(Locale.ROOT);
-        String normalizedArguments = Arrays.stream(arguments == null ? new String[0] : arguments)
+        List<String> normalizedArguments = Arrays.stream(arguments == null ? new String[0] : arguments)
                 .filter(Objects::nonNull)
-                .collect(java.util.stream.Collectors.joining(" "))
-                .toLowerCase(Locale.ROOT);
+                .map(argument -> argument.toLowerCase(Locale.ROOT))
+                .toList();
         String keyword = commandKeyword.trim().toLowerCase(Locale.ROOT);
         String executable = normalizedCommand.substring(
                 Math.max(normalizedCommand.lastIndexOf('/'), normalizedCommand.lastIndexOf('\\')) + 1);
@@ -159,14 +198,27 @@ public class ProcessLifecycleManager {
                         .map(String::trim)
                         .filter(targetKeyword -> !targetKeyword.isEmpty())
                         .map(targetKeyword -> targetKeyword.toLowerCase(Locale.ROOT))
-                        .anyMatch(normalizedArguments::contains);
+                        .anyMatch(targetKeyword -> normalizedArguments.stream()
+                                .anyMatch(argument -> matchesArgumentIdentity(argument, targetKeyword)));
+    }
+
+    private static boolean matchesArgumentIdentity(String argument, String targetKeyword) {
+        String value = argument.substring(argument.lastIndexOf('=') + 1);
+        String basename = value.substring(
+                Math.max(value.lastIndexOf('/'), value.lastIndexOf('\\')) + 1);
+        return value.equals(targetKeyword) || basename.equals(targetKeyword);
     }
 
     public record EjectionReport(
             String reason,
+            boolean accepted,
+            boolean terminationConfirmed,
             int processesTerminated,
             boolean resurrectionTriggered,
             Instant timestamp) {
+    }
+
+    private record EjectionOutcome(int processesTerminated, boolean terminationConfirmed) {
     }
 
     @FunctionalInterface

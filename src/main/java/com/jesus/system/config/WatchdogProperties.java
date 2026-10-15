@@ -17,8 +17,8 @@ public class WatchdogProperties {
     /** Command substring identifying a JVM process (e.g. "java"). */
     private String processCommandKeyword = "java";
 
-    /** Argument substrings identifying the monitored legacy target processes. */
-    private List<String> targetProcessKeywords = new ArrayList<>(List.of("egov", "tomcat"));
+    /** Exact argument values or path basenames identifying monitored legacy processes. */
+    private List<String> targetProcessKeywords = new ArrayList<>(List.of("egov-app.war", "tomcat"));
 
     /** Nix flake app used to respawn the target after ejection. */
     private String nixRunTarget = ".#jesus-server-17";

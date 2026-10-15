@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +24,7 @@ class ProcessLifecycleManagerTest {
     void matchesLegacyJavaProcess() {
         assertThat(ProcessLifecycleManager.matchesTarget(
                 "/usr/bin/java", new String[]{"-jar", "/opt/egovframe/egov-app.war"},
-                "java", List.of("egov", "tomcat")))
+                "java", List.of("egov-app.war", "tomcat")))
                 .isTrue();
 
         assertThat(ProcessLifecycleManager.matchesTarget(
@@ -41,7 +43,12 @@ class ProcessLifecycleManagerTest {
         // A JVM, but not the legacy target (e.g. the watchdog itself)
         assertThat(ProcessLifecycleManager.matchesTarget(
                 "java", new String[]{"-jar", "jesus-watchdog-agent.jar"},
-                "java", List.of("egov")))
+                "java", List.of("egov-app.war")))
+                .isFalse();
+
+        assertThat(ProcessLifecycleManager.matchesTarget(
+                "java", new String[]{"-jar", "/opt/not-egov-app.war"},
+                "java", List.of("egov-app.war")))
                 .isFalse();
     }
 
@@ -61,7 +68,8 @@ class ProcessLifecycleManagerTest {
     @Test
     void matchingIsCaseInsensitive() {
         assertThat(ProcessLifecycleManager.matchesTarget(
-                "JAVA", new String[]{"-jar", "EGOV-APP.war"}, "java", List.of("egov")))
+                "JAVA", new String[]{"-jar", "/opt/EGOV-APP.war"},
+                "java", List.of("egov-app.war")))
                 .isTrue();
     }
 
@@ -107,5 +115,41 @@ class ProcessLifecycleManagerTest {
 
         assertThat(retryingManager.resurrect()).isFalse();
         assertThat(retryingManager.resurrect()).isTrue();
+    }
+
+    @Test
+    void rejectsConcurrentRecoveryAndDirectEjectionWhileRecoveryIsRunning() throws Exception {
+        CountDownLatch launchStarted = new CountDownLatch(1);
+        CountDownLatch allowLaunch = new CountDownLatch(1);
+        CompletableFuture<Process> processExit = new CompletableFuture<>();
+        Process process = mock(Process.class);
+        when(process.onExit()).thenReturn(processExit);
+        ProcessLifecycleManager guardedManager = new ProcessLifecycleManager(properties, target -> {
+            launchStarted.countDown();
+            try {
+                if (!allowLaunch.await(5, TimeUnit.SECONDS)) {
+                    throw new IOException("Timed out waiting to continue test launch");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting to continue test launch", e);
+            }
+            return process;
+        });
+
+        CompletableFuture<ProcessLifecycleManager.EjectionReport> first =
+                CompletableFuture.supplyAsync(() -> guardedManager.ejectAndResurrect("first"));
+        try {
+            assertThat(launchStarted.await(5, TimeUnit.SECONDS)).isTrue();
+            ProcessLifecycleManager.EjectionReport duplicate =
+                    guardedManager.ejectAndResurrect("duplicate");
+
+            assertThat(duplicate.accepted()).isFalse();
+            assertThat(guardedManager.ejectTargetProcesses("direct")).isZero();
+        } finally {
+            allowLaunch.countDown();
+        }
+
+        assertThat(first.get(5, TimeUnit.SECONDS).resurrectionTriggered()).isTrue();
     }
 }
