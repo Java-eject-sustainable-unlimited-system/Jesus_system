@@ -84,8 +84,12 @@ was triggered. Avoid logging configured control tokens or other secrets.
 The endpoint is destructive. Only configure a token and call it in an
 isolated test environment:
 
+Provide the test token to the server and the client through a secret manager
+or another mechanism that does not put its value in shell history. The
+following request assumes the client environment already contains the
+`JESUS_WATCHDOG_MANUAL_CONTROL_TOKEN` variable:
+
 ```sh
-export JESUS_WATCHDOG_MANUAL_CONTROL_TOKEN='use-a-test-only-secret'
 curl --fail-with-body \
   -X POST http://127.0.0.1:9090/api/jesus/eject-and-resurrect \
   -H "X-Watchdog-Token: ${JESUS_WATCHDOG_MANUAL_CONTROL_TOKEN}"
