@@ -138,6 +138,8 @@ Invalid runtime settings fail during configuration binding: probe ports must be 
 
 Threshold counters are maintained independently by each monitor. A successful probe resets its counter, except heap pressure, which recovers one failure at a time when heap use falls below the configured threshold.
 
+The default scheduler uses five worker threads so a blocked monitor does not occupy the worker needed by another monitor. Unexpected task exceptions are logged and do not stop that monitor's future scheduled checks. An embedding application can provide its own `TaskScheduler`; it should also reserve enough workers to avoid coupling these checks.
+
 Process termination excludes the watchdog's own PID and only matches processes owned by the same OS user. The executable must match `process-command-keyword`, and at least one configured target keyword must appear in the process arguments. Matching processes are forcibly terminated; the configured Nix target is then started if no resurrection is already in progress.
 
 ## 🔐 Safety and Access
