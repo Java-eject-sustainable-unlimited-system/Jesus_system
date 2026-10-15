@@ -25,7 +25,7 @@ parsing, or the complete interpreter.
 Install Alire and run the following from this directory:
 
 ```sh
-alr toolchain --select gnat_native
+alr toolchain --select gnat_native=16.1.0
 alr exec -- gnatprove -P spark_proofs.gpr --mode=prove --level=2
 ```
 

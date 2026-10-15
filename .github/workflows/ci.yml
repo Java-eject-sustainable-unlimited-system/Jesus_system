@@ -35,7 +35,7 @@ jobs:
       - name: Prove Ada operand stack contracts
         working-directory: ada-jvm
         run: |
-          alr toolchain --select gnat_native
+          alr toolchain --select gnat_native=16.1.0
           alr exec -- gnatprove -P spark_proofs.gpr --mode=prove --level=2
 
       - name: Build and self-test Ada JVM prototype

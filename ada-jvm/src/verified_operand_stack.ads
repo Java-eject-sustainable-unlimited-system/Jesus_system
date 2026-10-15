@@ -3,6 +3,8 @@ with Interfaces;
 package Verified_Operand_Stack
   with SPARK_Mode
 is
+   use type Interfaces.Integer_32;
+
    Capacity : constant := 256;
 
    subtype Stack_Depth is Natural range 0 .. Capacity;
@@ -32,7 +34,7 @@ private
      of Interfaces.Integer_32;
 
    type Operand_Stack is record
-      Values : Stack_Values;
+      Values : Stack_Values := [others => 0];
       Top    : Stack_Depth := 0;
    end record;
 end Verified_Operand_Stack;

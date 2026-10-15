@@ -6,5 +6,5 @@ licenses = "MIT"
 maintainers = ["J.E.S.U.S. contributors"]
 maintainers-logins = ["Java-eject-sustainable-unlimited-system"]
 
-[depends-on]
-gnatprove = "^16.1.0"
+[[depends-on]]
+gnatprove = "=16.1.0"
