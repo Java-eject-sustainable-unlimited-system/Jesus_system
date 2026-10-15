@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -88,7 +90,7 @@ public class ProcessLifecycleManager {
      * Respawn the target through the Nix flake. Guarded until the launched
      * process exits so simultaneous triggers cannot stack duplicate instances.
      *
-     * @return true if a respawn was actually triggered
+     * @return true if a respawn was triggered and, when recovery verification is enabled, the target accepted connections
      */
     public boolean resurrect() {
         if (!resurrectionGuard.compareAndSet(false, true)) {
@@ -99,6 +101,12 @@ public class ProcessLifecycleManager {
             log.info("[⚡ RESURRECT] Spawning fresh instance via Nix: {}", properties.getNixRunTarget());
             Process process = processStarter.start(properties.getNixRunTarget());
             process.onExit().whenComplete((finished, failure) -> resurrectionGuard.set(false));
+            if (!awaitRecovery(process)) {
+                log.error("[💥] Respawned target did not become reachable at {}:{} within {}.",
+                        properties.getProbeHost(), properties.getProbePort(),
+                        properties.getRecoveryVerifyTimeout());
+                return false;
+            }
             log.info("[✨] Resurrection trigger dispatched successfully.");
             return true;
         } catch (IOException | RuntimeException e) {
@@ -106,6 +114,33 @@ public class ProcessLifecycleManager {
             log.error("[💥 CRITICAL] Failed to resurrect target via Nix: {}", e.getMessage());
             return false;
         }
+    }
+
+    private boolean awaitRecovery(Process process) {
+        Duration timeout = properties.getRecoveryVerifyTimeout();
+        if (timeout.isZero()) {
+            return true;
+        }
+        long deadline = System.nanoTime() + timeout.toNanos();
+        int connectMillis = (int) Math.max(1, Math.min(properties.getProbeTimeout().toMillis(), Integer.MAX_VALUE));
+        do {
+            if (!process.isAlive()) {
+                return false;
+            }
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(properties.getProbeHost(), properties.getProbePort()),
+                        connectMillis);
+                return true;
+            } catch (IOException e) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
+            }
+        } while (System.nanoTime() < deadline);
+        return false;
     }
 
     public List<ProcessHandle> findTargetProcesses() {

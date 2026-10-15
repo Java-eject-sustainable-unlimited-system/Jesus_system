@@ -45,6 +45,9 @@ public class WatchdogProperties {
     /** HTTP connect/read timeout for vitals checks. */
     private Duration httpTimeout = Duration.ofMillis(1500);
 
+    /** Max time to wait for the probe host/port to accept connections after respawn; zero disables verification. */
+    private Duration recoveryVerifyTimeout = Duration.ZERO;
+
     /** Consecutive health check failures required before ejection. */
     private int failureThreshold = 3;
 
@@ -128,6 +131,17 @@ public class WatchdogProperties {
             throw new IllegalArgumentException("probePort must be between 1 and 65535");
         }
         this.probePort = probePort;
+    }
+
+    public Duration getRecoveryVerifyTimeout() {
+        return recoveryVerifyTimeout;
+    }
+
+    public void setRecoveryVerifyTimeout(Duration recoveryVerifyTimeout) {
+        if (recoveryVerifyTimeout == null || recoveryVerifyTimeout.isNegative()) {
+            throw new IllegalArgumentException("recoveryVerifyTimeout must not be negative");
+        }
+        this.recoveryVerifyTimeout = recoveryVerifyTimeout;
     }
 
     public Duration getProbeTimeout() {

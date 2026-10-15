@@ -21,7 +21,8 @@ jesus:
     # Target process identification (Java 17 ProcessHandle matching)
     process-command-keyword: java
     target-process-keywords: [ egov, tomcat ]
-    # Nix flake app respawned after ejection
+    # Nix flake app respawned after ejection. NOTE: the default runs the Watchdog itself (port 9090);
+    # override with an app that starts the monitored target (probe-port below) before enabling recovery.
     nix-run-target: ".#jesus-server-17"
     # Manual ejection is disabled unless a token is provided through the environment.
     manual-control-token: ${JESUS_WATCHDOG_MANUAL_CONTROL_TOKEN:}
@@ -31,6 +32,8 @@ jesus:
     health-endpoint-allowed-origins: [ http://localhost:8080 ]
     probe-host: 127.0.0.1
     probe-port: 8080
+    # Max wait for probe-host:probe-port to accept connections after respawn (0 disables verification)
+    recovery-verify-timeout: 60s
     # Timeouts
     probe-timeout: 300ms
     http-timeout: 1500ms
