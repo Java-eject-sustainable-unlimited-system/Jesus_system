@@ -160,6 +160,7 @@ Process termination excludes the watchdog's own PID and only matches processes o
 * [Security policy](SECURITY.md)
 * [Accessibility statement](ACCESSIBILITY.md)
 * [Experimental Ada and Rust interpreter guide](ada-jvm/README.md)
+* [Optional local LLM security review](docs/LOCAL_LLM.md)
 
 🧪 Test & Formal Verification (Nix)
 
