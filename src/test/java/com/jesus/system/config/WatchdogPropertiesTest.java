@@ -48,7 +48,7 @@ class WatchdogPropertiesTest {
         assertThat(properties.getProbeHost()).isEqualTo("127.0.0.1");
         assertThat(properties.getProbePort()).isEqualTo(8080);
         assertThat(properties.getProcessCommandKeyword()).isEqualTo("java");
-        assertThat(properties.getTargetProcessKeywords()).contains("egov", "tomcat");
+        assertThat(properties.getTargetProcessKeywords()).containsExactly("egov-app.war", "tomcat");
         assertThat(properties.getNixRunTarget()).isEqualTo(".#jesus-server-17");
         assertThat(properties.getManualControlToken()).isEmpty();
     }
