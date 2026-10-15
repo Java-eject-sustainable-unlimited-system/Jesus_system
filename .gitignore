@@ -21,3 +21,7 @@ result-*
 
 # Logs
 *.log
+
+# Python
+__pycache__/
+*.py[cod]
