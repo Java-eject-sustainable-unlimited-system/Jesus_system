@@ -1,16 +1,11 @@
 with Ada.Unchecked_Conversion;
+with Verified_Operand_Stack;
 
 package body Bytecode_VM is
    use type Ada.Streams.Stream_Element;
    use type Ada.Streams.Stream_Element_Offset;
    use type Interfaces.Integer_32;
    use type Interfaces.Unsigned_32;
-
-   Stack_Capacity : constant := 256;
-
-   subtype Stack_Index is Natural range 0 .. Stack_Capacity;
-   type Operand_Stack is array (Positive range 1 .. Stack_Capacity)
-     of Interfaces.Integer_32;
 
    function To_Unsigned is new Ada.Unchecked_Conversion
      (Interfaces.Integer_32, Interfaces.Unsigned_32);
@@ -21,28 +16,25 @@ package body Bytecode_VM is
      (Code : Ada.Streams.Stream_Element_Array)
       return Interfaces.Integer_32
    is
-      Stack : Operand_Stack;
-      Top   : Stack_Index := 0;
+      Stack : Verified_Operand_Stack.Operand_Stack;
       PC    : Ada.Streams.Stream_Element_Offset := Code'First;
 
       procedure Push (Value : Interfaces.Integer_32) is
       begin
-         if Top = Stack_Capacity then
+         if Verified_Operand_Stack.Depth (Stack) =
+           Verified_Operand_Stack.Capacity
+         then
             raise Bytecode_Error with "operand stack overflow";
          end if;
-         Top := Top + 1;
-         Stack (Top) := Value;
+         Verified_Operand_Stack.Push (Stack, Value);
       end Push;
 
       function Pop return Interfaces.Integer_32 is
-         Value : Interfaces.Integer_32;
       begin
-         if Top = 0 then
+         if Verified_Operand_Stack.Depth (Stack) = 0 then
             raise Bytecode_Error with "operand stack underflow";
          end if;
-         Value := Stack (Top);
-         Top := Top - 1;
-         return Value;
+         return Verified_Operand_Stack.Pop (Stack);
       end Pop;
 
       function Read_Byte return Ada.Streams.Stream_Element is
@@ -101,7 +93,7 @@ package body Bytecode_VM is
                   Push (Left / Right);
                end if;
             when 16#AC# =>
-               if Top = 0 then
+               if Verified_Operand_Stack.Depth (Stack) = 0 then
                   raise Bytecode_Error with "ireturn requires a stack value";
                end if;
                return Pop;

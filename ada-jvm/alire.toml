@@ -1,0 +1,10 @@
+name = "jesus_ada_jvm"
+description = "Ada JVM prototype and SPARK proof dependencies"
+version = "0.1.0-dev"
+authors = ["J.E.S.U.S. contributors"]
+licenses = "MIT"
+maintainers = ["J.E.S.U.S. contributors"]
+maintainers-logins = ["Java-eject-sustainable-unlimited-system"]
+
+[depends-on]
+gnatprove = "^16.1.0"

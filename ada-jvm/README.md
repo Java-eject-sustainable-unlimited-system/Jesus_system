@@ -15,6 +15,20 @@ The interpreter uses a bounded operand stack and Java `int` arithmetic
 semantics for the supported operations. Raw method-code files are limited to
 64 KiB by the command-line runner.
 
+## SPARK proof
+
+The interpreter uses a bounded operand stack specified in SPARK. GNATprove
+checks the stack's push/pop preconditions, depth changes, and LIFO return value;
+this proof does not cover bytecode decoding, arithmetic semantics, class-file
+parsing, or the complete interpreter.
+
+Install Alire and run the following from this directory:
+
+```sh
+alr toolchain --select gnat_native
+alr exec -- gnatprove -P spark_proofs.gpr --mode=prove --level=2
+```
+
 ## Build and run
 
 Install GNAT and `gprbuild`, then from this directory:

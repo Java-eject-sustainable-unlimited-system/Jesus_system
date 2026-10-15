@@ -29,6 +29,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends gnat gprbuild
 
+      - name: Set up Alire
+        uses: alire-project/setup-alire@v5
+
+      - name: Prove Ada operand stack contracts
+        working-directory: ada-jvm
+        run: |
+          alr toolchain --select gnat_native
+          alr exec -- gnatprove -P spark_proofs.gpr --mode=prove --level=2
+
       - name: Build and self-test Ada JVM prototype
         working-directory: ada-jvm
         run: |
