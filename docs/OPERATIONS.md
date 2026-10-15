@@ -101,6 +101,11 @@ secret and does not replace TLS, network restrictions, or access controls.
 Do not put real tokens in shell history, tickets, documentation, or
 screenshots. Do not expose this endpoint to an untrusted network.
 
+An accepted recovery returns `202 Accepted` with status `STARTED`; this means
+the configured Nix command started, not that the service is healthy. A
+concurrent recovery returns `409 Conflict` with status `IN_PROGRESS`, and a
+failure to start Nix returns `500 Internal Server Error` with status `FAILURE`.
+
 ## Troubleshooting
 
 | Symptom | Checks |

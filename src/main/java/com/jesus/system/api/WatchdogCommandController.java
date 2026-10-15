@@ -49,9 +49,31 @@ public class WatchdogCommandController {
 
         EjectionReport report = lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER");
 
-        return ResponseEntity.ok(Map.of(
-                "status", "SUCCESS",
-                "action", "EJECT_AND_RESURRECT_EXECUTED",
+        if (!report.accepted()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "status", "IN_PROGRESS",
+                    "action", "EJECT_AND_RESURRECT_SKIPPED",
+                    "operationAccepted", false,
+                    "processesTerminated", report.processesTerminated(),
+                    "resurrectionTriggered", report.resurrectionTriggered(),
+                    "timestamp", report.timestamp().toEpochMilli()
+            ));
+        }
+        if (!report.resurrectionTriggered()) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "status", "FAILURE",
+                    "action", "EJECT_AND_RESURRECT_FAILED",
+                    "operationAccepted", true,
+                    "processesTerminated", report.processesTerminated(),
+                    "resurrectionTriggered", false,
+                    "timestamp", report.timestamp().toEpochMilli()
+            ));
+        }
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                "status", "STARTED",
+                "action", "EJECT_AND_RESURRECT_STARTED",
+                "operationAccepted", true,
                 "processesTerminated", report.processesTerminated(),
                 "resurrectionTriggered", report.resurrectionTriggered(),
                 "timestamp", report.timestamp().toEpochMilli()

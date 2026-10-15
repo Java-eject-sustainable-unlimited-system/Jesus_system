@@ -42,16 +42,47 @@ class WatchdogCommandControllerTest {
     @Test
     void executesManualEjectionOnlyWithConfiguredToken() {
         properties.setManualControlToken("configured-secret");
-        EjectionReport report = new EjectionReport("MANUAL_API_TRIGGER", 2, true, Instant.EPOCH);
+        EjectionReport report = new EjectionReport("MANUAL_API_TRIGGER", 2, true, true, Instant.EPOCH);
         when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER")).thenReturn(report);
 
         var response = controller.manualEjectAndResurrect("configured-secret");
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody())
+                .containsEntry("status", "STARTED")
+                .containsEntry("operationAccepted", true)
                 .containsEntry("processesTerminated", 2)
                 .containsEntry("resurrectionTriggered", true);
         verify(lifecycleManager).ejectAndResurrect("MANUAL_API_TRIGGER");
+    }
+
+    @Test
+    void reportsRecoveryStartFailure() {
+        properties.setManualControlToken("configured-secret");
+        when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER"))
+                .thenReturn(new EjectionReport("MANUAL_API_TRIGGER", 1, false, true, Instant.EPOCH));
+
+        var response = controller.manualEjectAndResurrect("configured-secret");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody())
+                .containsEntry("status", "FAILURE")
+                .containsEntry("operationAccepted", true)
+                .containsEntry("resurrectionTriggered", false);
+    }
+
+    @Test
+    void reportsWhenRecoveryIsAlreadyInProgress() {
+        properties.setManualControlToken("configured-secret");
+        when(lifecycleManager.ejectAndResurrect("MANUAL_API_TRIGGER"))
+                .thenReturn(new EjectionReport("MANUAL_API_TRIGGER", 0, false, false, Instant.EPOCH));
+
+        var response = controller.manualEjectAndResurrect("configured-secret");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody())
+                .containsEntry("status", "IN_PROGRESS")
+                .containsEntry("operationAccepted", false);
     }
 
     private void assertUnauthorized(String token) {

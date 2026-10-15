@@ -145,7 +145,7 @@ Process termination excludes the watchdog's own PID and only matches processes o
 ## 🔐 Safety and Access
 
 * Watchdog activation enables scheduled checks that can terminate processes. Test process matching and recovery configuration in an isolated environment before enabling it against real services.
-* The manual API accepts only `POST /api/jesus/eject-and-resurrect` with an `X-Watchdog-Token` value equal to the configured token. It returns `401 Unauthorized` if the token is unset or incorrect.
+* The manual API accepts only `POST /api/jesus/eject-and-resurrect` with an `X-Watchdog-Token` value equal to the configured token. It returns `401 Unauthorized` if the token is unset or incorrect, `409 Conflict` if recovery is already in progress, `500 Internal Server Error` if Nix cannot start, and `202 Accepted` when Nix starts. `202` does not indicate service readiness.
 * The standalone server binds to loopback and exposes only the Actuator health endpoint over HTTP by default. Avoid exposing the manual API to untrusted networks.
 * `/actuator/health` describes this watchdog's reported monitor vitals; it is not a direct health response from the monitored target.
 * The project is early-stage, uncertified, and not ready for operational deployment.

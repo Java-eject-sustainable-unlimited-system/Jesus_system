@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * and resurrect it as a pristine Nix artifact.
  *
  * <p>Replaces the eject/resurrect logic previously copy-pasted across
- * every watchdog service, and guards against concurrent monitors stacking
- * duplicate resurrections.
+ * every watchdog service, and guards against overlapping ejection and
+ * resurrection requests.
  */
 @Component
 public class ProcessLifecycleManager {
@@ -35,7 +35,7 @@ public class ProcessLifecycleManager {
 
     private final WatchdogProperties properties;
     private final ProcessStarter processStarter;
-    private final AtomicBoolean resurrectionGuard = new AtomicBoolean(false);
+    private final AtomicBoolean recoveryGuard = new AtomicBoolean(false);
 
     @Autowired
     public ProcessLifecycleManager(WatchdogProperties properties) {
@@ -54,9 +54,19 @@ public class ProcessLifecycleManager {
      * Full J.E.S.U.S protocol: terminate every matching target process, then respawn via Nix.
      */
     public EjectionReport ejectAndResurrect(String reason) {
-        int terminated = ejectTargetProcesses(reason);
-        boolean respawned = resurrect();
-        return new EjectionReport(reason, terminated, respawned, Instant.now());
+        if (!recoveryGuard.compareAndSet(false, true)) {
+            log.info("[⚡ RECOVERY] Recovery already in progress, skipping duplicate trigger.");
+            return new EjectionReport(reason, 0, false, false, Instant.now());
+        }
+        int terminated;
+        try {
+            terminated = ejectMatchingProcesses(reason);
+        } catch (RuntimeException e) {
+            recoveryGuard.set(false);
+            throw e;
+        }
+        boolean respawned = startResurrection();
+        return new EjectionReport(reason, terminated, respawned, true, Instant.now());
     }
 
     /**
@@ -65,6 +75,18 @@ public class ProcessLifecycleManager {
      * @return number of processes terminated
      */
     public int ejectTargetProcesses(String reason) {
+        if (!recoveryGuard.compareAndSet(false, true)) {
+            log.info("[⚡ EJECT] Recovery already in progress, skipping duplicate ejection.");
+            return 0;
+        }
+        try {
+            return ejectMatchingProcesses(reason);
+        } finally {
+            recoveryGuard.set(false);
+        }
+    }
+
+    private int ejectMatchingProcesses(String reason) {
         List<ProcessHandle> targets = findTargetProcesses();
         int terminated = 0;
         for (ProcessHandle process : targets) {
@@ -85,24 +107,28 @@ public class ProcessLifecycleManager {
     }
 
     /**
-     * Respawn the target through the Nix flake. Guarded until the launched
-     * process exits so simultaneous triggers cannot stack duplicate instances.
+     * Respawn the target through the Nix flake. The recovery guard remains held
+     * until the launched process exits so another request cannot eject it.
      *
      * @return true if a respawn was actually triggered
      */
     public boolean resurrect() {
-        if (!resurrectionGuard.compareAndSet(false, true)) {
+        if (!recoveryGuard.compareAndSet(false, true)) {
             log.info("[⚡ RESURRECT] Resurrection already in progress, skipping duplicate trigger.");
             return false;
         }
+        return startResurrection();
+    }
+
+    private boolean startResurrection() {
         try {
             log.info("[⚡ RESURRECT] Spawning fresh instance via Nix: {}", properties.getNixRunTarget());
             Process process = processStarter.start(properties.getNixRunTarget());
-            process.onExit().whenComplete((finished, failure) -> resurrectionGuard.set(false));
+            process.onExit().whenComplete((finished, failure) -> recoveryGuard.set(false));
             log.info("[✨] Resurrection trigger dispatched successfully.");
             return true;
         } catch (IOException | RuntimeException e) {
-            resurrectionGuard.set(false);
+            recoveryGuard.set(false);
             log.error("[💥 CRITICAL] Failed to resurrect target via Nix: {}", e.getMessage());
             return false;
         }
@@ -166,6 +192,7 @@ public class ProcessLifecycleManager {
             String reason,
             int processesTerminated,
             boolean resurrectionTriggered,
+            boolean accepted,
             Instant timestamp) {
     }
 

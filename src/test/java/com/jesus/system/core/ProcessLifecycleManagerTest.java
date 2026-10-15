@@ -73,24 +73,58 @@ class ProcessLifecycleManagerTest {
     }
 
     @Test
-    void preventsDuplicateResurrectionsUntilSpawnedProcessExits() {
+    void preventsDuplicateRecoveryRequestsUntilSpawnedProcessExits() {
         CompletableFuture<Process> processExit = new CompletableFuture<>();
         Process process = mock(Process.class);
         when(process.onExit()).thenReturn(processExit);
         AtomicInteger launches = new AtomicInteger();
+        AtomicInteger processScans = new AtomicInteger();
         ProcessLifecycleManager guardedManager = new ProcessLifecycleManager(properties, target -> {
             launches.incrementAndGet();
             return process;
-        });
+        }) {
+            @Override
+            public List<ProcessHandle> findTargetProcesses() {
+                processScans.incrementAndGet();
+                return List.of();
+            }
+        };
 
-        assertThat(guardedManager.resurrect()).isTrue();
+        assertThat(guardedManager.ejectAndResurrect("test").accepted()).isTrue();
+        var duplicate = guardedManager.ejectAndResurrect("duplicate");
+        assertThat(duplicate.accepted()).isFalse();
+        assertThat(duplicate.processesTerminated()).isZero();
         assertThat(guardedManager.resurrect()).isFalse();
         assertThat(launches).hasValue(1);
+        assertThat(processScans).hasValue(1);
 
         processExit.complete(process);
 
         assertThat(guardedManager.resurrect()).isTrue();
         assertThat(launches).hasValue(2);
+    }
+
+    @Test
+    void releasesRecoveryGuardWhenProcessCannotStart() {
+        AtomicInteger launches = new AtomicInteger();
+        ProcessLifecycleManager retryingManager = new ProcessLifecycleManager(properties, target -> {
+            if (launches.getAndIncrement() == 0) {
+                throw new IOException("Nix unavailable");
+            }
+            Process process = mock(Process.class);
+            when(process.onExit()).thenReturn(new CompletableFuture<>());
+            return process;
+        }) {
+            @Override
+            public List<ProcessHandle> findTargetProcesses() {
+                return List.of();
+            }
+        };
+
+        var failed = retryingManager.ejectAndResurrect("test");
+        assertThat(failed.accepted()).isTrue();
+        assertThat(failed.resurrectionTriggered()).isFalse();
+        assertThat(retryingManager.ejectAndResurrect("retry").resurrectionTriggered()).isTrue();
     }
 
     @Test
