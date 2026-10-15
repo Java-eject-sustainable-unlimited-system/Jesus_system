@@ -150,6 +150,8 @@ Process termination excludes the watchdog's own PID and only matches processes o
 * `/actuator/health` describes this watchdog's reported monitor vitals; it is not a direct health response from the monitored target.
 * The project is early-stage, uncertified, and not ready for operational deployment.
 
+For endpoint behavior, response fields, and a safe local invocation example, see
+the [HTTP API reference](docs/HTTP_API.md).
 
 🧪 Test & Formal Verification (Nix)
 
