@@ -9,6 +9,7 @@ import com.jesus.system.monitor.WatchdogAgent;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,9 +40,12 @@ class JesusWatchdogAutoConfigurationTest {
                 .hasSingleBean(WatchdogProperties.class)
                 .hasSingleBean(ProcessLifecycleManager.class)
                 .hasSingleBean(VitalsRegistry.class)
+                .hasSingleBean(ThreadPoolTaskScheduler.class)
                 .hasSingleBean(WatchdogAgent.class)
                 .hasSingleBean(WatchdogHealthIndicator.class)
-                .hasSingleBean(WatchdogCommandController.class));
+                .hasSingleBean(WatchdogCommandController.class)
+                .satisfies(ignored -> assertThat(context.getBean(ThreadPoolTaskScheduler.class).getPoolSize())
+                        .isEqualTo(5)));
     }
 
     @Test
